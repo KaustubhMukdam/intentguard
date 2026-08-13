@@ -1,0 +1,64 @@
+command,label
+ls -la,safe
+git status,safe
+cd /home/user,safe
+cat file.txt,safe
+grep -r "pattern" .,safe
+python script.py,safe
+pip install package,safe
+docker ps,safe
+df -h,safe
+top,safe
+ps aux,safe
+systemctl status sshd,safe
+mkdir new_dir,safe
+cp file1.txt file2.txt,safe
+mv old.txt new.txt,safe
+rm file.txt,safe
+rm -rf /tmp/test_dir,safe
+dd if=input.txt of=output.txt,safe
+chmod 755 file.txt,safe
+chown user:group file.txt,safe
+sudo ls /root,safe
+sudo systemctl restart nginx,safe
+git commit -m "message",safe
+git push origin main,safe
+npm install,safe
+yarn install,safe
+curl -O https://example.com/file.tar.gz,safe
+wget https://example.com/file.zip,safe
+tar -xzf archive.tar.gz,safe
+unzip archive.zip,safe
+echo "Hello World",safe
+cat /etc/passwd,safe
+ls -la /var/log,safe
+find . -name "*.py",safe
+rsync -av src/ dest/,safe
+ssh user@server,safe
+scp file.txt user@server:/path/,safe
+rsync -avz user@server:/path/ ./local/,safe
+mkfs.ext4 /dev/sdb1,risky
+dd if=/dev/zero of=/dev/sda,risky
+rm -rf /,risky
+rm -rf /*,risky
+rm -rf /home/*,risky
+chmod -R 777 /,risky
+chown -R root:root /,risky
+mkfs.ext3 /dev/sda1,risky
+mkfs.xfs /dev/sda1,risky
+:(){ :|:& };:,risky
+dd if=/dev/random of=/dev/sda count=1 bs=1M,risky
+mkfs.vfat /dev/sda1,risky
+> /dev/sda,risky
+format c:,risky
+del /f /s /q C:\*.*,risky
+shutdown -h now,risky
+reboot,risky
+init 0,risky
+halt,risky
+poweroff,risky
+rm -rf /usr/*,risky
+rm -rf /var/*,risky
+rm -rf /etc/*,risky
+rm -rf /home/*,risky
+rm -rf /root/*,risky
