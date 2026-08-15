@@ -1,32 +1,31 @@
 #!/bin/bash
-# IntentGuard shell wrapper function
-# This function intercepts commands before execution and passes them to the Python pipeline
+# IntentGuard shell wrapper function.
+# Source this in .bashrc:  source /path/to/intentguard/shell/intentguard.sh
+# Usage: intentguard <command>   (or alias it to intercept every command)
+#
+# Wraps a command so it is evaluated by the IntentGuard pipeline before bash
+# executes it. Exit codes from intentguard/cli.py:
+#   0 = safe (or flagged + confirmed) -> run the command
+#   1 = flagged + declined (or usage error) -> do not run
 
 intentguard() {
-    # Capture the command string
-    local command="$*"
-    
-    # Pass to Python pipeline
-    python3 -m intentguard.cli "$command"
-    
-    # Check the exit code from the Python script
-    # If it returns 0, the command was safe and should execute
-    # If it returns 1, the command was flagged and user declined
-    # If it returns 2, the command was flagged but we should still execute (after confirmation)
-    local exit_code=$?
-    
-    if [ $exit_code -eq 0 ]; then
-        # Safe command - execute normally
-        eval "$command"
-    elif [ $exit_code -eq 2 ]; then
-        # Flagged but user confirmed - execute
-        eval "$command"
-    else
-        # Flagged and user declined or error - don't execute
-        echo "Command aborted by IntentGuard"
+    if [ "$#" -eq 0 ]; then
+        echo "usage: intentguard <command...>" >&2
         return 1
     fi
+
+    local command="$*"
+    local project_dir
+    project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    PYTHONPATH="$project_dir" python3 -m intentguard.cli "$command"
+    local exit_code=$?
+
+    if [ "$exit_code" -eq 0 ]; then
+        eval "$command"
+        return $?
+    fi
+    return "$exit_code"
 }
 
-# Export the function so it's available in subshells
 export -f intentguard

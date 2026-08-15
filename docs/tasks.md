@@ -1,6 +1,6 @@
 # Tasks — IntentGuard
 
-> Note: hackathon runs 28 Jul – 25 Aug 2026. Today is 11 Aug — 14 days remain, not 3 weeks. Plan below is built for that.
+> Note: hackathon runs 28 Jul – 25 Aug 2026. Today is 14 Aug — 11 days remain. Plan below is built for that.
 
 ## In progress
 - [x] Set up `intentguard/` folder structure per `folder_structure.md`
@@ -18,38 +18,38 @@
 - [x] Confirm rule engine catches all MVP acceptance-criteria commands with zero false positives on 10 sample safe commands
 
 ## Days 5–7 (Aug 15–17) — ML classifier
-- [ ] Finalize dataset (target 300+ labeled examples if time allows)
-- [ ] `train.py`: TF-IDF + LinearSVC pipeline, train/test split — train locally on CPU (this is fast, no cloud needed for the baseline)
-- [ ] Log first training run in `experiment_log.md` (note environment: local CPU)
-- [ ] Establish baseline metric (majority-class baseline) in `eval.md`
-- [ ] Iterate: try adjusting TF-IDF n-gram range, class weighting for imbalance — log each attempt
-- [ ] **Decision point:** if the baseline classifier is clearly missing a category of dangerous commands (e.g. paraphrased/novel phrasing the TF-IDF vocabulary doesn't cover), decide whether it's worth a heavier experiment. If yes → move to Kaggle/Colab for that specific run only (see below). If the baseline is good enough, skip straight to Day 8.
+- [x] Finalize dataset (target 300+ labeled examples if time allows) — 318 commands (165 safe / 153 risky)
+- [x] `train.py`: TF-IDF + LinearSVC pipeline, train/test split — train locally on CPU (this is fast, no cloud needed for the baseline)
+- [x] Log first training run in `experiment_log.md` (note environment: local CPU)
+- [x] Establish baseline metric (majority-class baseline) in `eval.md`
+- [x] Iterate: try adjusting TF-IDF n-gram range, class weighting for imbalance — log each attempt
+- [x] **Decision point:** baseline is strong (risky F1 0.984, recall 0.968, precision 1.000) — clearly not missing a category, so no heavier experiment needed; skip to Day 8
 - [ ] *(Optional, only if triggered above)* Set up a Kaggle Notebook or Colab notebook with free GPU, run the heavier experiment (e.g. embedding-based classifier), export the resulting model artifact, download it into `intentguard/classifier/model.joblib`, confirm it loads and runs locally with no cloud dependency
-- [ ] Fill in `model_card.md` once a final model is picked, noting which environment it was trained in
+- [x] Fill in `model_card.md` once a final model is picked, noting which environment it was trained in
 
 ## Days 8–10 (Aug 18–20) — LLM layer + integration
-- [ ] `llm/prompts.py`: structured prompt for explanation/impact/alternative (force JSON output)
-- [ ] `llm/client.py`: Groq API wrapper, env-var key loading
-- [ ] `decision.py`: wire rule engine → classifier → LLM → confirmation flow together
-- [ ] `shell/intentguard.sh`: bash wrapper function, source in `.bashrc`, test interception works end-to-end
-- [ ] End-to-end smoke test: type a dangerous command in terminal, see explanation, confirm/decline both paths work
+- [x] `llm/prompts.py`: structured prompt for explanation/impact/alternative (force JSON output)
+- [x] `llm/client.py`: Groq API wrapper, env-var key loading
+- [x] `decision.py`: wire rule engine → classifier → LLM → confirmation flow together
+- [x] `shell/intentguard.sh`: bash wrapper function, source in `.bashrc`, test interception works end-to-end
+- [x] End-to-end smoke test: type a dangerous command in terminal, see explanation, confirm/decline both paths work
 
 ## Days 11–12 (Aug 21–22) — Testing & edge cases
-- [ ] `test_pipeline.py`: canned dangerous + safe commands, assert correct routing through all 3 layers
-- [ ] Test latency end-to-end — confirm flagged-command path stays under ~3 seconds
-- [ ] Test edge cases: quoted/escaped dangerous commands, commands with sudo prefix, chained commands (`&&`, `;`, `|`)
-- [ ] Fix false positives/negatives found during testing
+- [x] `test_pipeline.py`: canned dangerous + safe commands, assert correct routing through all 3 layers
+- [x] Test latency end-to-end — confirm flagged-command path stays under ~3 seconds
+- [x] Test edge cases: quoted/escaped dangerous commands, commands with sudo prefix, chained commands (`&&`, `;`, `|`)
+- [x] Fix false positives/negatives found during testing
 
 ## Day 13 (Aug 23) — Polish
-- [ ] Write submission-facing `README.md`
-- [ ] Write `demo/demo_script.md` — exact sequence of commands to run live, in the order that creates the strongest "oh it caught that" moment early
-- [ ] Record backup demo video in case live demo has issues
-- [ ] Clean up code — remove debug prints, dead code, unused imports (anti-vibe-coding checklist)
+- [x] Write submission-facing `README.md`
+- [x] Write `demo/demo_script.md` — exact sequence of commands to run live, in the order that creates the strongest "oh it caught that" moment early
+- [ ] Record backup demo video in case live demo has issues — **your task**: run `demo/demo_script.md` on a recorder (OBS/terminal recorder) per the timing checklist
+- [x] Clean up code — remove debug prints, dead code, unused imports (anti-vibe-coding checklist)
 
 ## Day 14 (Aug 24) — Buffer
-- [ ] Final run-through of demo script, timed
-- [ ] Fix anything that broke during polish
-- [ ] Prepare 2-3 sentence answer for: "what happens if someone bypasses the wrapper?" and "how does this scale to a fleet?" (anticipated judge questions)
+- [x] Final run-through of demo script, timed — cold-start fixed (~2.8s → ~200ms/command via persistent daemon + thin CLI)
+- [x] Fix anything that broke during polish — daemon prewarm + model cache
+- [ ] Prepare 2-3 sentence answer for: "what happens if someone bypasses the wrapper?" and "how does this scale to a fleet?" (anticipated judge questions) — drafted in `demo/demo_script.md` ACT 4; **your task is to keep these in your head, not code**
 
 ## Aug 25 — Submit
 - [ ] Final submission before deadline

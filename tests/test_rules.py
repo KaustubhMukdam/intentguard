@@ -35,6 +35,22 @@ class RuleEngineSpec(unittest.TestCase):
         for cmd in ["rm -r -f /home/*", "rm -f -r /"]:
             self.assertTrue(check_rule_match(cmd)["matched"], cmd)
 
+    def test_rm_longform_flags_is_caught(self):
+        for cmd in ["rm --recursive --force /etc", "rm --force --recursive /var"]:
+            self.assertTrue(check_rule_match(cmd)["matched"], cmd)
+
+    def test_rm_combined_flags_is_caught(self):
+        for cmd in ["rm -rfv /etc", "rm -rfv /boot", "rm -rfv /home/*"]:
+            self.assertTrue(check_rule_match(cmd)["matched"], cmd)
+
+    def test_rm_chained_is_caught(self):
+        for cmd in ["rm -rf /; echo ok", "rm -rf /etc; echo ok", "rm -rf / && echo ok"]:
+            self.assertTrue(check_rule_match(cmd)["matched"], cmd)
+
+    def test_firewalld_stop_is_caught(self):
+        for cmd in ["systemctl stop firewalld", "systemctl disable firewalld", "service firewalld stop"]:
+            self.assertTrue(check_rule_match(cmd)["matched"], cmd)
+
     def test_dd_to_block_device_is_caught(self):
         result = check_rule_match("dd if=/dev/zero of=/dev/sda")
         self.assertTrue(result["matched"])
@@ -104,6 +120,9 @@ class SafePassThroughSpec(unittest.TestCase):
         "echo 'hello world'",
         "rm -rf /tmp/test_dir",
         "rm file.txt",
+        "systemctl stop nginx",
+        "systemctl disable cron",
+        "service ssh restart",
         "curl -O https://example.com/file.tar.gz",
         "sudo systemctl restart nginx",
         "find . -name '*.py'",

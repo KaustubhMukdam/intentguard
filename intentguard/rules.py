@@ -10,11 +10,18 @@ from .tokenizer import tokenize_command
 # Commands pass through tokenizer.py first (shlex), which normalizes quoting
 # and collapses whitespace to single spaces, so patterns can rely on that form.
 
-# rm -rf (or -r -f / -f -r) targeting root or a system directory
-DANGEROUS_RM_PATTERN = (
-    r'\brm\b\s+(-(?:r[fF]|[fF]r)\s+|(-r\s+-f\s+|-f\s+-r\s+))'
-    r'(/(\s|$)|/\*|/(?:etc|usr|var|bin|sbin|lib|boot|home|root)\b)'
+# rm -rf (or -r -f / -f -r / --recursive --force / combined flags like -rfv)
+# targeting root or a system directory; accepts chained forms (; && |) after the path
+RM_FLAGS = (
+    r'(?:-(?:[rR][fF]|[fF][rR])\w*\s+|'
+    r'-[rR]\s+-[fF]\s+|-[fF]\s+-[rR]\s+|'
+    r'--recursive\s+--force\s+|--force\s+--recursive\s+)'
 )
+RM_TARGET = (
+    r'(/(\s|$|[;&|])|/\*|'
+    r'/(?:etc|usr|var|bin|sbin|lib|boot|home|root)\b)'
+)
+DANGEROUS_RM_PATTERN = r'\brm\b\s+' + RM_FLAGS + RM_TARGET
 # dd writing to a block device (of=/dev/sdX, /dev/hdX, /dev/vdX, /dev/mmcblkN, /dev/nvme)
 DANGEROUS_DD_PATTERN = r'\bdd\b.*\bof\s*=\s*/dev/(sd|hd|vd|mmcblk|nvme)'
 # shell redirection writing directly to a block device
@@ -27,8 +34,12 @@ DANGEROUS_CHMOD_PATTERN = r'\bchmod\s+-r\s+777\s+/\s*(\*)?'
 DANGEROUS_CHOWN_PATTERN = r'\bchown\s+-r\s+\S+:\S+\s+/'
 # fork bomb
 DANGEROUS_FORK_BOMB_PATTERN = r':\s*\(\s*\)\s*\{.*:\|:.*\};'
-# firewall: disabling ufw or flushing iptables
-DANGEROUS_FIREWALL_PATTERN = r'\b(ufw\s+disable|iptables\s+-f\b)'
+# firewall: disabling ufw, flushing iptables, or stopping/disabling firewalld
+DANGEROUS_FIREWALL_PATTERN = (
+    r'\b(ufw\s+disable|iptables\s+-f\b|'
+    r'systemctl\s+(stop|disable)\s+firewalld\b|'
+    r'service\s+firewalld\s+(stop|disable))'
+)
 # find-based recursive deletion on root/system paths
 DANGEROUS_FIND_DELETE_PATTERN = r'\bfind\s+/\S*\s+.*(-exec\s+rm\b|delete)'
 # force-removing system-critical packages

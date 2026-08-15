@@ -1,87 +1,74 @@
 """
 Groq API client for IntentGuard
-Handles communication with Groq for LLM explanations
+Handles communication with Groq for LLM explanations.
+
+Design: `explain_command` takes an optional `client_factory` so tests can
+inject a fake; production uses the real GroqClient backed by GROQ_API_KEY.
 """
 
-import os
 import json
-from groq import Groq
-from dotenv import load_dotenv
-from .prompts.get_explanation_prompt
+import os
 
-# Load environment variables
+from dotenv import load_dotenv
+
+from .prompts import get_explanation_prompt
+
 load_dotenv()
 
-class GroqClient:
-    def __init__(self):
-        self.api_key = os.getenv("GROQ_API_KEY")
-        if not self.api_key:
-            raise ValueError("GROQ_API_KEY not found in environment variables")
-        
-        self.client = Groq(api_key=self.api_key)
-        self.model = "llama-3.3-70b-versatile"
-    
-    def get_explanation(self, command: str, flagged_by: str, reason: str) -> dict:
-        """
-        Get explanation from Groq for a flagged command
-        
-        Args:
-            command: The command that was flagged
-            flagged_by: Which layer flagged it (rule_engine, classifier)
-            reason: Why it was flagged
-            
-        Returns:
-            Dict with explanation, impact, and alternative
-        """
-        prompt = get_explanation_prompt(command, flagged_by, reason)
-        
-        try:
-            chat_completion = self.client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt,
-                    }
-                ],
-                model=self.model,
-                temperature=0.3,
-                max_tokens=500,
-                response_format={"type": "json_object"}
-            )
-            
-            response_content = chat_completion.choices[0].message.content
-            return json.loads(response_content)
-            
-        except Exception as e:
-            # Fallback explanation if API fails
-            return {
-                "what_it_does": f"Executes the command: {command}",
-                "impact": "Unable to generate detailed explanation due to API error",
-                "safer_alternative": "Review command manually before execution",
-                "error": str(e)
-            }
 
-# Global client instance
-_client = None
+def _get_groq_client():
+    """Lazily import and construct the real Groq client (key required)."""
+    from groq import Groq
 
-def get_client() -> GroqClient:
-    """Get or create the Groq client instance"""
-    global _client
-    if _client is None:
-        _client = GroqClient()
-    return _client
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not set — add it to .env (see .env.example)")
+    return Groq(api_key=api_key)
 
-def explain_command(command: str, flagged_by: str, reason: str) -> dict:
+
+def get_fallback_explanation(command: str, error: str) -> dict:
+    """Local fallback so a flagged command never stalls the demo if the API fails."""
+    return {
+        "what_it_does": f"Runs `{command}` on this system.",
+        "impact": "Unable to reach explanation service — treat this command as risky and review it manually.",
+        "safer_alternative": "No direct alternative — review manually",
+        "fallback": True,
+        "error": error,
+    }
+
+
+def explain_command(command, flagged_by, reason, risk_level="high", client_factory=None) -> dict:
     """
-    Convenience function to get command explanation
-    
+    Generate (what_it_does, impact, safer_alternative) for a flagged command.
+
     Args:
-        command: The command that was flagged
-        flagged_by: Which layer flagged it
-        reason: Why it was flagged
-        
+        command: The command that was flagged.
+        flagged_by: "rule_engine" or "classifier".
+        reason: Why it was flagged.
+        risk_level: severity label.
+        client_factory: callable returning a Groq-like client. Defaults to the
+            real Groq client (requires GROQ_API_KEY).
+
     Returns:
-        Dict with explanation details
+        Dict with what_it_does / impact / safer_alternative keys.
     """
-    client = get_client()
-    return client.get_explanation(command, flagged_by, reason)
+    prompt = get_explanation_prompt(command, flagged_by, reason, risk_level)
+
+    try:
+        client = (client_factory or _get_groq_client)()
+        completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+            temperature=0.3,
+            max_tokens=500,
+            response_format={"type": "json_object"},
+        )
+        raw = completion.choices[0].message.content
+        parsed = json.loads(raw)
+        return {
+            "what_it_does": parsed.get("what_it_does", ""),
+            "impact": parsed.get("impact", ""),
+            "safer_alternative": parsed.get("safer_alternative", ""),
+        }
+    except Exception as e:  # missing key, rate limit, parse failure, network
+        return get_fallback_explanation(command, str(e))

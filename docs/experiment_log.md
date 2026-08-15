@@ -1,4 +1,29 @@
-# Experiment Log — IntentGuard (Classifier)
+# Experiment Log — IntentGuard
+
+## 2026-08-14 — Run 01: Baseline TF-IDF + LinearSVC
+
+- **Hypothesis:** Character n-grams over shlex-tokenized commands + LinearSVC gives meaningful F1/recall on the risky class vs. majority baseline.
+- **Change made:** First training run; no tuning yet. Char analyzer, n-gram (2,4), `class_weight='balanced'`, dual=False, max_iter=1000.
+- **Dataset:** 318 commands (165 safe / 153 risky), 80/20 stratified split (random_state=42).
+- **Environment:** Local CPU (WSL), scikit-learn 1.9.0.
+- **Metric focus (per eval.md):** F1 and recall on the risky class.
+- **Result:** accuracy 0.9688, risky F1 0.9677, risky recall 0.9677, risky precision 0.9677 (n=64 test commands). Model saved to `intentguard/classifier/model.joblib`.
+
+## 2026-08-14 — Run 02: n-gram sweep → final model
+
+- **Hypothesis:** character n-gram range tradeoff — shorter ranges (1-3, 1-4) capture more word/stem signal and improve risky-class precision without hurting recall.
+- **Change made:** swept ngram ranges (1,3), (1,4), (3,5), (2,4) — all with `class_weight='balanced'`. Also tested `--no-balance` on (1,3).
+- **Dataset:** same 318 commands, same 80/20 stratified split (random_state=42).
+- **Environment:** Local CPU (WSL), scikit-learn 1.9.0.
+- **Result:** winner = **ngram (1,3)**: accuracy 0.9844, risky F1 **0.9836**, risky recall 0.9677, risky precision **1.000**. `--no-balance` gave identical numbers, so keep `balanced` (safer default). Only 1 error in 64: missed `systemctl stop firewalld` (risky → predicted safe). Saved as final model to `intentguard/classifier/model.joblib`.
+
+### Comparison
+| ngram | risky F1 | risky recall | risky precision | accuracy |
+|-------|----------|--------------|-----------------|----------|
+| (1,3) | 0.9836 | 0.9677 | 1.0000 | 0.9844 |
+| (1,4) | 0.9836 | 0.9677 | 1.0000 | 0.9844 |
+| (2,4) | 0.9677 | 0.9677 | 0.9677 | 0.9688 |
+| (3,5) | 0.9508 | 0.9355 | 0.9667 | 0.9531 | (Classifier)
 
 > Log every training run of the TF-IDF + LinearSVC command classifier, no matter how small the change.
 
