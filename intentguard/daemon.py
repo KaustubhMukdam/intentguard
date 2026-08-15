@@ -9,21 +9,13 @@ JSON {"command": "..."}, reply with a line of JSON decision dict.
 
 import json
 import socket
-import tempfile
-import hashlib
 from pathlib import Path
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from intentguard import decision
-
-
-def socket_path() -> Path:
-    """Repo-scoped socket in the temp dir so parallel checkouts don't collide."""
-    root = str(Path(__file__).resolve().parents[1]).encode()
-    tag = hashlib.md5(root).hexdigest()[:8]
-    return Path(tempfile.gettempdir()) / f"intentguard-{tag}.sock"
+from intentguard.socketutil import addr, is_unix, socket_path
 
 
 def evaluate(text: str) -> dict:
@@ -43,11 +35,18 @@ def _prewarm():
         pass  # no model yet — classifier path will report the error per command
 
 
-def serve(sock_path: Path):
-    if sock_path.exists():
-        sock_path.unlink()
-    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    server.bind(str(sock_path))
+def serve():
+    unix = is_unix()
+    server = socket.socket(socket.AF_UNIX if unix else socket.AF_INET,
+                           socket.SOCK_STREAM)
+    if unix:
+        if socket_path().exists():
+            socket_path().unlink()
+        server.bind(str(socket_path()))
+    else:
+        _, port = addr()
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind(("127.0.0.1", port))
     server.listen(16)
 
     # Bind FIRST so the CLI can connect immediately; prewarm in background.
@@ -78,4 +77,4 @@ def serve(sock_path: Path):
 
 if __name__ == "__main__":
     _prewarm()
-    serve(socket_path())
+    serve()

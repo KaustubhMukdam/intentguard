@@ -6,3 +6,4 @@ docs/design_prompt.md
 intentguard/classifier/model.joblib
 .env
 demo/demo_script.md
+venv
