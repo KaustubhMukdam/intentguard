@@ -3,114 +3,63 @@ Decision engine for IntentGuard
 Ties rule engine, classifier, and LLM output into final flag/explain/confirm flow
 """
 
-import sys
-import os
-from typing import Dict, Any
 from . import rules
-from . import tokenizer
 from .classifier import predict
-from .llm import client
+from .llm import client as llm_client
 
-# Risk threshold for classifier - can be tuned
+# Classifier confidence threshold for flagging as risky (can be tuned)
 RISK_THRESHOLD = 0.6
 
-def evaluate_command(command: str) -> Dict[str, Any]:
+
+def evaluate_command(command: str, explain_fn=None) -> dict:
     """
-    Main decision function - evaluates command through the pipeline
-    
+    Evaluate a command through the 3-layer pipeline.
+
     Args:
-        command: Raw command string to evaluate
-        
+        command: Raw command string.
+        explain_fn: optional callable(command, flagged_by, reason, risk_level) that
+            returns the LLM explanation dict. Defaults to the real Groq client;
+            tests inject a fake.
+
     Returns:
-        Dict with action to take and explanation if needed
-        action can be: "execute", "abort", "confirm_then_execute"
+        Dict with action ("execute" | "confirm_then_execute"), and on flag:
+        reason, layer, risk_level, explanation.
     """
-    # Step 1: Normalize and tokenize command
-    normalized_command = " ".join(tokenizer.tokenize_command(command))
-    
-    # Step 2: Rule engine check (zero latency)
-    rule_result = rules.check_rule_match(normalized_command)
+    explain_fn = explain_fn or llm_client.explain_command
+
+    # Layer 1 — rule engine (zero latency, deterministic)
+    rule_result = rules.check_rule_match(command)
     if rule_result["matched"]:
-        # Rule engine match - skip classifier, go straight to LLM
-        explanation = client.explain_command(
-            command, 
-            flagged_by="rule_engine", 
-            reason=rule_result["description"]
-        )
         return {
             "action": "confirm_then_execute",
             "reason": rule_result["description"],
             "layer": "rule_engine",
-            "explanation": explanation
+            "risk_level": rule_result["risk_level"],
+            "explanation": explain_fn(
+                command,
+                flagged_by="rule_engine",
+                reason=rule_result["description"],
+                risk_level=rule_result["risk_level"],
+            ),
         }
-    
-    # Step 3: ML classifier check
-    try:
-        classifier_result = predict.predict_command(normalized_command)
-        if classifier_result["is_risky"] and classifier_result["confidence"] >= RISK_THRESHOLD:
-            # Classifier flagged as risky - go to LLM
-            explanation = client.explain_command(
+
+    # Layer 2 — ML classifier (ambiguous/novel commands only)
+    classifier_result = predict.predict_command(command)
+    if classifier_result["is_risky"] and classifier_result["confidence"] >= RISK_THRESHOLD:
+        reason = f"ML classifier detected risky intent (confidence {classifier_result['confidence']:.2f})"
+        return {
+            "action": "confirm_then_execute",
+            "reason": reason,
+            "layer": "classifier",
+            "risk_level": "medium",
+            "confidence": classifier_result["confidence"],
+            "explanation": explain_fn(
                 command,
                 flagged_by="classifier",
-                reason=f"ML classifier detected risky intent (confidence: {classifier_result['confidence']:.2f})"
-            )
-            return {
-                "action": "confirm_then_execute",
-                "reason": f"ML classifier detected risky intent",
-                "layer": "classifier",
-                "confidence": classifier_result["confidence"],
-                "explanation": explanation
-            )
-    except Exception as e:
-        # If classifier fails (e.g., model not trained), continue without it
-        # In a real implementation, we might want to log this
-        pass
-    
-    # Step 4: If we get here, command is considered safe
-    return {
-        "action": "execute",
-        "reason": "Command deemed safe by all layers",
-        "layer": "none"
-    }
+                reason=reason,
+                risk_level="medium",
+            ),
+        }
 
-def get_confirmation_prompt(explanation: dict) -> str:
-    """
-    Format the explanation into a user-friendly confirmation prompt
-    
-    Args:
-        explanation: Dict from LLM with what_it_does, impact, safer_alternative
-        
-    Returns:
-        Formatted prompt string for user confirmation
-    """
-    prompt = f"""��⚠��️  INTENTGUARD FLAGGED THIS COMMAND
-
-Command: {explanation.get('command', 'N/A')}
-Flagged by: {explanation.get('layer', 'unknown')}
-
-What this does: {explanation.get('what_it_does', 'Unknown')}
-Blast radius: {explanation.get('impact', 'Unknown')}
-Safer alternative: {explanation.get('safer_alternative', 'None')}
-
-Proceed anyway? [y/N]:
-"""
-    return prompt
-
-if __name__ == "__main__":
-    # Test the decision engine
-    test_commands = [
-        "ls -la",
-        "rm -rf /",
-        "dd if=/dev/zero of=/dev/sda",
-        "chmod 755 file.txt",
-        ":(){ :|:& };:"
-    ]
-    
-    for cmd in test_commands:
-        print(f"Evaluating: {cmd}")
-        result = evaluate_command(cmd)
-        print(f"  Action: {result['action']}")
-        if result['action'] == 'confirm_then_execute':
-            print(f"  Reason: {result['reason']}")
-            print(f"  Layer: {result.get('layer', 'unknown')}")
-        print()
+    # Safe — pass through invisibly
+    return {"action": "execute", "layer": "none", "reason": "Command deemed safe by all layers"}

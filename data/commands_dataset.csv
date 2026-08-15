@@ -1,64 +1,319 @@
 command,label
-ls -la,safe
-git status,safe
-cd /home/user,safe
-cat file.txt,safe
-grep -r "pattern" .,safe
-python script.py,safe
-pip install package,safe
-docker ps,safe
-df -h,safe
-top,safe
-ps aux,safe
-systemctl status sshd,safe
-mkdir new_dir,safe
-cp file1.txt file2.txt,safe
-mv old.txt new.txt,safe
-rm file.txt,safe
-rm -rf /tmp/test_dir,safe
-dd if=input.txt of=output.txt,safe
-chmod 755 file.txt,safe
-chown user:group file.txt,safe
-sudo ls /root,safe
-sudo systemctl restart nginx,safe
-git commit -m "message",safe
-git push origin main,safe
-npm install,safe
-yarn install,safe
-curl -O https://example.com/file.tar.gz,safe
-wget https://example.com/file.zip,safe
-tar -xzf archive.tar.gz,safe
-unzip archive.zip,safe
-echo "Hello World",safe
-cat /etc/passwd,safe
-ls -la /var/log,safe
-find . -name "*.py",safe
-rsync -av src/ dest/,safe
-ssh user@server,safe
-scp file.txt user@server:/path/,safe
-rsync -avz user@server:/path/ ./local/,safe
-mkfs.ext4 /dev/sdb1,risky
-dd if=/dev/zero of=/dev/sda,risky
 rm -rf /,risky
 rm -rf /*,risky
-rm -rf /home/*,risky
-chmod -R 777 /,risky
-chown -R root:root /,risky
-mkfs.ext3 /dev/sda1,risky
-mkfs.xfs /dev/sda1,risky
-:(){ :|:& };:,risky
-dd if=/dev/random of=/dev/sda count=1 bs=1M,risky
-mkfs.vfat /dev/sda1,risky
-> /dev/sda,risky
-format c:,risky
-del /f /s /q C:\*.*,risky
-shutdown -h now,risky
-reboot,risky
-init 0,risky
-halt,risky
-poweroff,risky
-rm -rf /usr/*,risky
-rm -rf /var/*,risky
+rm -rf /etc,risky
 rm -rf /etc/*,risky
+rm -rf /usr,risky
+rm -rf /usr/local,risky
+rm -rf /var,risky
+rm -rf /var/*,risky
+rm -rf /var/log,risky
+rm -rf /var/log/*,risky
+rm -rf /bin,risky
+rm -rf /sbin,risky
+rm -rf /boot,risky
+rm -rf /lib,risky
+rm -rf /lib64,risky
+rm -rf /opt/system,risky
+rm -rf /root,risky
+rm -rf /home,risky
 rm -rf /home/*,risky
+rm -rf /home/user/*,risky
 rm -rf /root/*,risky
+rm -r /,risky
+rm -r -f /etc,risky
+rm -f -r /usr,risky
+rm -fr /,risky
+rm -rf -- /var,risky
+sudo rm -rf /,risky
+rm -rf ./../../../../etc,risky
+rm -rf /etc/passwd,risky
+rm -rf /home/user/.config,risky
+rm -rf /var/lib,risky
+rm -rf /usr/bin,risky
+rm -rf /bin/*,risky
+rm -rf /etc/*conf,risky
+rm -rf /usr/*,risky
+rm -rf /var/*/*,risky
+rm -vrf /home/*/.ssh,risky
+rm -rf ~/*,risky
+rm -rf *,risky
+rm -rf ./*,risky
+rm -r *,risky
+rm -Rf /boot/*,risky
+rm -rf ../*,risky
+rm -rf ../../*,risky
+dd if=/dev/zero of=/dev/sda,risky
+dd if=/dev/zero of=/dev/sda1,risky
+dd if=/dev/random of=/dev/sdb,risky
+dd if=/dev/null of=/dev/sdc count=1,risky
+dd if=/dev/urandom of=/dev/mmcblk0,risky
+dd if=/dev/sda of=/dev/sdb,risky
+dd if=/dev/zero of=/dev/nvme0n1 bs=4M,risky
+dd if=/tmp/disk.img of=/dev/hda,risky
+dd if=/dev/zero of=/dev/vda status=progress,risky
+mkfs.ext4 /dev/sda1,risky
+mkfs.ext3 /dev/sdb,risky
+mkfs.xfs /dev/sdc1,risky
+mkfs.vfat /dev/sda5,risky
+mkfs.ntfs /dev/sdd1,risky
+mkfs /dev/sda1,risky
+mkfs -t ext4 /dev/sdb2,risky
+mkfs.btrfs /dev/sdc1,risky
+mkfs.ext2 /dev/hda1,risky
+mkfs.xfs -f /dev/sda,risky
+mkfs.ext4 -F /dev/sdb1,risky
+> /dev/sda,risky
+cat /dev/zero > /dev/sdb,risky
+echo x > /dev/sdc1,risky
+dd if=/dev/zero of=/dev/sda bs=512 count=1,risky
+shred /dev/sda,risky
+shred -n 3 /dev/sda1,risky
+wipefs -a /dev/sda,risky
+fdisk /dev/sda,risky
+parted /dev/sda mklabel gpt,risky
+sfdisk -n -1 /dev/sda,risky
+chmod -R 777 /,risky
+chmod -R 777 /*,risky
+chmod -R 777 /etc,risky
+chmod -R 777 /usr,risky
+chmod -R 777 /var,risky
+chmod -R 777 /boot,risky
+chmod -R 777 /bin,risky
+chmod -R 777 /root,risky
+chmod -R 777 /home,risky
+chmod 777 /,risky
+chmod -r 777 /etc,risky
+chmod -R a+rwx /,risky
+chown -R root:root /,risky
+chown -R root /etc,risky
+chown -R 0:0 /usr,risky
+chown -R nobody:nogroup /var,risky
+chown -R root /home/*,risky
+chmod -R 000 /etc,risky
+chmod -R 000 /usr,risky
+:(){ :|:& };:,risky
+:(){:|:&};:,risky
+:;:,risky
+(){ :|:& };:,risky
+while true; do :; done &,risky
+while :; do sleep 0; done &,risky
+yes > /dev/null &,risky
+sudo :(){ :|:& };:,risky
+for i in $(seq 1 1000); do bash & done,risky
+seq 1 100000 | xargs -P 100 bash -c ':' &,risky
+nohup yes > /dev/null &,risky
+fork(){ fork | fork & }; fork,risky
+python -c 'while True: fork()' 2>/dev/null &,risky
+perl -e 'fork while fork' &,risky
+processor:(){ :|:& };:,risky
+ufw disable,risky
+iptables -F,risky
+iptables -X,risky
+iptables -P INPUT ACCEPT,risky
+iptables -P FORWARD ACCEPT,risky
+iptables -P OUTPUT ACCEPT,risky
+ip6tables -F,risky
+firewall-cmd --complete-reload,risky
+systemctl stop firewalld,risky
+systemctl disable firewalld,risky
+iptables --flush,risky
+iptables -t nat -F,risky
+nft flush ruleset,risky
+apt remove -y linux-image-generic,risky
+apt purge -y systemd,risky
+apt-get remove --purge glibc,risky
+apt remove -y linux-headers-generic,risky
+dpkg --remove libc6,risky
+dpkg --purge systemd,risky
+yum remove kernel-devel,risky
+dnf remove -y kernel,risky
+dnf autoremove -y glibc,risky
+pacman -R linux,risky
+pacman -Rns systemd,risky
+zypper remove kernel-source,risky
+ls,safe
+ls -la,safe
+ls -l /var/log,safe
+ls -alt,safe
+pwd,safe
+cd /tmp,safe
+cd ~,safe
+cat file.txt,safe
+cat /etc/hostname,safe
+less README.md,safe
+more /etc/passwd,safe
+head -20 file.log,safe
+tail -f /var/log/syslog,safe
+grep -r 'error' /var/log,safe
+grep -i pattern file,safe
+find . -name '*.py',safe
+find /home/user -type f -mtime -7,safe
+which python,safe
+whereis curl,safe
+file script.sh,safe
+stat file.txt,safe
+du -sh /tmp,safe
+df -h,safe
+df -T,safe
+mount,safe
+free -h,safe
+uptime,safe
+who,safe
+last,safe
+history,safe
+git status,safe
+git log --oneline,safe
+git diff,safe
+git diff HEAD,safe
+git commit -m 'fix bug',safe
+git add .,safe
+git add file.py,safe
+git push origin main,safe
+git push --set-upstream origin feature,safe
+git pull,safe
+git fetch,safe
+git checkout feature-branch,safe
+git branch -a,safe
+git stash,safe
+git show HEAD,safe
+git remote -v,safe
+git tag -l,safe
+git log --author 'me' -5,safe
+git config --list,safe
+git merge --no-ff feature,safe
+git rebase -i HEAD~3,safe
+git cherry-pick abc123,safe
+git clean -nd,safe
+pip install requests,safe
+pip install -r requirements.txt,safe
+pip list,safe
+pip freeze > requirements.txt,safe
+python script.py,safe
+python -m pytest,safe
+python manage.py runserver,safe
+python -c 'print(1)',safe
+npm install,safe
+npm install --save-dev typescript,safe
+npm run build,safe
+npm test,safe
+npx prettier --write .,safe
+yarn add axios,safe
+docker ps,safe
+docker ps -a,safe
+docker images,safe
+docker logs myapp,safe
+docker build -t myapp .,safe
+docker run -it myapp,safe
+docker compose up -d,safe
+docker exec -it myapp bash,safe
+kubectl get pods,safe
+kubectl logs pod-name,safe
+gcc -o hello hello.c,safe
+python -m venv venv,safe
+source venv/bin/activate,safe
+jupyter notebook,safe
+node app.js,safe
+bundle install,safe
+cargo build,safe
+go build,safe
+dotnet build,safe
+make,safe
+make test,safe
+cmake ..,safe
+top,safe
+htop,safe
+ps aux,safe
+ps -ef | grep python,safe
+pidof nginx,safe
+systemctl status sshd,safe
+systemctl status nginx,safe
+systemctl list-units,safe
+service ssh status,safe
+journalctl -u sshd -f,safe
+journalctl --since today,safe
+sudo systemctl restart nginx,safe
+sudo systemctl reload ssh,safe
+sudo systemctl enable cron,safe
+sudo systemctl start docker,safe
+sudo update-grub,safe
+sudo apt update,safe
+sudo apt upgrade -y,safe
+sudo apt install curl,safe
+sudo useradd -m alice,safe
+passwd --status,safe
+sudo -l,safe
+ip addr,safe
+ip route,safe
+ss -tulpn,safe
+netstat -tulpn,safe
+ping -c 4 google.com,safe
+traceroute google.com,safe
+dig example.com,safe
+nslookup example.com,safe
+curl -I https://example.com,safe
+wget -q file,safe
+curl -O https://example.com/file.tar.gz,safe
+tar -xzf archive.tar.gz,safe
+tar -czf backup.tar.gz ./data,safe
+unzip archive.zip,safe
+zip -r out.zip .,safe
+rsync -av src/ dest/,safe
+rsync --dry-run -av src/ dest/,safe
+scp file.txt user@server:/path/,safe
+ssh user@server,safe
+ssh -p 2222 user@host,safe
+cp file1.txt file2.txt,safe
+cp -r ./data /backup,safe
+mv old.txt new.txt,safe
+mv file.txt /tmp/,safe
+mkdir -p /tmp/test,safe
+touch newfile.txt,safe
+vim file.txt,safe
+nano config,safe
+echo 'hello world',safe
+printf 'hi',safe
+rm file.txt,safe
+rm /tmp/old.log,safe
+rm -r /tmp/scratch,safe
+rm -rf /tmp/test_dir,safe
+rm -f /tmp/cache.tmp,safe
+ln -s /path/to/file link,safe
+ln file1 file2,safe
+tee -a output.log,safe
+wc -l file.txt,safe
+sort file.txt,safe
+uniq -c file.txt,safe
+diff a.txt b.txt,safe
+xargs -I {} echo {} < list.txt,safe
+$ ls /etc,safe
+dd if=/dev/zero of=/dev/sdc,risky
+dd bs=1M if=/dev/urandom of=/dev/mapper/root,risky
+mkfs.ext4 -f /dev/sda,risky
+mkfs.reiserfs /dev/sdb1,risky
+chmod -R 777 /lib,risky
+chmod -R 777 /sbin,risky
+chown -R www-data:www-data /usr,risky
+rm -rf /var/cache,risky
+rm -rf /home/admin,risky
+echo 1 > /proc/sys/kernel/panic,risky
+dd if=/dev/zero of=/dev/sda5,risky
+:(){ :|:& };: &,risky
+iptables -P INPUT DROP,risky
+iptables -P FORWARD DROP,risky
+apt purge -y linux-image-*,risky
+pacman -Rsc linux,risky
+rm -r /usr/local/lib/python3.11,risky
+chown -R 0 /boot,risky
+sfdisk --delete /dev/sda,risky
+wipefs --all /dev/sdb1,risky
+apt list --installed,safe
+lsof -i :8080,safe
+df -i,safe
+git diff --cached,safe
+pip show requests,safe
+npm list --depth=0,safe
+docker stats --no-stream,safe
+kubectl describe pod mypod,safe
+sudo journalctl -xe,safe
+"ps -eo pid,ppid,cmd",safe

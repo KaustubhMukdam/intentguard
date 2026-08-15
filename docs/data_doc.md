@@ -11,7 +11,7 @@
 - **Created:** 11 Aug 2026 onward, iteratively through Days 1-7.
 
 ## Structure
-- **Rows:** [fill in as dataset grows — target 300+]
+- **Rows:** 318 (final, as of 14 Aug 2026)
 - **Columns:** `command` (string, raw command text), `label` (`safe` / `risky`)
 - **Target column:** `label`
 - **Feature types:** Text (command string) only for the MVP — no additional metadata features to keep the classifier simple and explainable.
@@ -33,11 +33,11 @@
 ## Preprocessing applied
 1. Whitespace normalization
 2. shlex tokenization (before vectorization, not stored in the CSV itself)
-3. [Fill in: train/val/test split ratio and whether stratified]
+3. Train/test split: 80/20 stratified — see `experiment_log.md` final run
 
 ## Known issues
 - Dataset size is small relative to a production classifier (hackathon time constraint) — documented honestly as a scoping limitation, not hidden.
-- Class balance: [fill in actual split once dataset is final — aim for roughly balanced, note if not]
+- Class balance: 165 safe / 153 risky (roughly balanced, ~52% / ~48%)
 - Coverage skews toward commands I'm personally familiar with — see `model_card.md` bias section.
 - Ambiguous/context-dependent commands (e.g. `git push --force`) are a known hard category — labeled based on typical-case risk, with the limitation noted rather than pretending the model handles context it can't see.
 

@@ -3,3 +3,5 @@ __pycache__
 .pytest_cache
 .venv
 docs/design_prompt.md
+intentguard/classifier/model.joblib
+.env

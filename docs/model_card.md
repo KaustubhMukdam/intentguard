@@ -3,37 +3,39 @@
 ## Model overview
 - **Type:** Linear Support Vector Classifier (LinearSVC) over TF-IDF features
 - **Task:** Binary classification — Linux command text → `safe` / `risky`
-- **Training date:** [fill in]
-- **Framework:** scikit-learn [version]
-- **Training environment:** Local CPU (laptop) / Kaggle Notebook (free GPU) / Google Colab (free GPU) — [pick one; note that inference always runs locally on CPU regardless of where training happened]
+- **Training date:** 2026-08-14
+- **Framework:** scikit-learn 1.9.0
+- **Training environment:** Local CPU (laptop/WSL) — no cloud needed; inference always runs locally on CPU
 
 ## Training data
 - **Source:** Self-curated dataset — see `data_doc.md` for full sourcing/curation notes
-- **Size:** [rows] commands
-- **Features used:** Raw command string → TF-IDF vector ([n-gram range])
-- **Target variable:** `label` — [X]% safe, [Y]% risky
-- **Preprocessing:** shlex tokenization before vectorization; [stratified train/test split — fill in ratio]
+- **Size:** 318 commands
+- **Features used:** shlex-tokenized command string → TF-IDF vector, character analyzer, n-gram range (1,3)
+- **Target variable:** `label` — 52% safe (165), 48% risky (153)
+- **Preprocessing:** shlex tokenization before vectorization; stratified 80/20 train/test split (random_state=42)
 
 ## Performance
 
 | Metric | Train | Test |
 |--------|-------|------|
-| Accuracy | | |
-| F1 (risky class) | | |
-| Precision (risky) | | |
-| Recall (risky) | | |
+| Accuracy | — | 0.984 |
+| F1 (risky class) | — | 0.984 |
+| Precision (risky) | — | 1.000 |
+| Recall (risky) | — | 0.968 |
 
-*(Fill in from final run in `experiment_log.md` and full rationale in `eval.md`)*
+*(From `experiment_log.md` Run 02 — final model, ngram (1,3). Full rationale in `eval.md`.)*
 
 ## What it does well
-[e.g. "Reliably separates commands with clear destructive verbs (rm, dd, mkfs, chmod -R) from routine commands (ls, git, cd)."]
+Reliably separates commands with clear destructive verbs (rm, dd, mkfs, chmod, chown, shred, wipefs, ufw/iptables, destructive package removal) from routine commands (ls, git, cd, pip, docker, systemctl status, ssh, curl). Perfect precision on the risky class in the held-out test — zero false alarms in 64 samples.
 
 ## Known limitations
-[Be honest — e.g. "Struggles with novel/obfuscated dangerous commands not resembling training examples; struggles with commands that are dangerous only in specific contexts (e.g. `git push --force` is fine solo, catastrophic on a shared branch — the model has no context awareness of *who else* depends on the target)."]
+- Missed `systemctl stop firewalld` in testing (predicted safe) — service-stop commands targeting security daemons are an edge the current data under-represents.
+- Struggles with novel/obfuscated dangerous commands not resembling training examples.
+- No context awareness: `git push --force` is fine solo, catastrophic on a shared branch — the model labels by typical-case risk only.
 
 ## Bias and fairness
 - Not applicable in the demographic sense — this classifies command text, not people.
-- **Coverage bias to disclose honestly:** the dataset skews toward commands I'm familiar with (general Linux admin, Python/ML dev workflows). It may under-represent domain-specific dangerous commands (e.g. database admin, networking-heavy ops) — noted as a known limitation, not hidden.
+- **Coverage bias to disclose honestly:** the dataset skews toward commands familiar to a general Linux/Python-ML admin workflow. It under-represents domain-specific dangerous commands (database admin, network-heavy ops) — noted as a known limitation, not hidden.
 
 ## Intended use
 Flagging destructive Linux commands for confirmation before execution, as one layer in a defense-in-depth pipeline (rule engine catches the obvious cases first; classifier catches the ambiguous ones the rule engine misses).

@@ -3,33 +3,37 @@ Prompt templates for IntentGuard LLM layer
 Structured prompts for explanation generation
 """
 
-def get_explanation_prompt(command: str, flagged_by: str, reason: str) -> str:
+
+def get_explanation_prompt(command: str, flagged_by: str, reason: str, risk_level: str = "high") -> str:
     """
-    Generate a structured prompt for the LLM to explain a flagged command
-    
+    Generate a structured prompt for the LLM to explain a flagged command.
+
     Args:
-        command: The command that was flagged
-        flagged_by: Which layer flagged it (rule_engine, classifier)
-        reason: Why it was flagged
-        
+        command: The command that was flagged.
+        flagged_by: Which layer flagged it (rule_engine / classifier).
+        reason: Why it was flagged.
+        risk_level: severity label from the rule engine (critical/high) or classifier.
+
     Returns:
-        Formatted prompt string
+        Formatted prompt string.
     """
-    return f"""You are a Linux safety expert. Analyze this command and provide:
-1. What the command actually does (in plain English)
-2. The potential blast radius/impact if executed
-3. A safer alternative command (if applicable)
+    return f"""You are a Linux safety expert for a tool called IntentGuard. A user tried to
+run a command and it was flagged as risky. Explain it so a non-expert understands in seconds.
 
 Command: {command}
 Flagged by: {flagged_by}
+Risk level: {risk_level}
 Reason: {reason}
 
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON in exactly this shape:
 {{
-  "what_it_does": "clear explanation of what the command does",
-  "impact": "description of potential damage or consequences",
-  "safer_alternative": "safer command to achieve similar goal, or 'No direct alternative - review manually' if none"
+  "what_it_does": "plain-English, what the command would actually do",
+  "impact": "specific blast radius or damage if executed",
+  "safer_alternative": "a safer command/approach, or 'No direct alternative — review manually' if none"
 }}
 
-Keep explanations concise (2-3 lines max for what_it_does and impact).
-Focus on safety and clarity."""
+Rules:
+- Keep "what_it_does" and "impact" to at most 2-3 short lines each.
+- Be concrete and technical, not generic ("deletes files" is too vague).
+- Never mention JSON or prompts in the output.
+"""
