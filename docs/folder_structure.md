@@ -6,14 +6,18 @@ intentguard/
 │   └── intentguard.sh          # bash wrapper function, sourced in .bashrc
 ├── intentguard/
 │   ├── __init__.py
-│   ├── cli.py                  # entrypoint — receives command string, orchestrates pipeline
+│   ├── cli.py                  # thin client — spawns/reuses daemon, sends one command, renders prompt
+│   ├── daemon.py               # background daemon — holds loaded model, evaluates over socket
+│   ├── socketutil.py           # portable IPC endpoint (Unix socket on Linux, TCP loopback on Windows)
 │   ├── rules.py                # regex/pattern definitions for known-catastrophic commands
 │   ├── tokenizer.py            # shlex-based safe command tokenization
 │   ├── classifier/
+│   │   ├── __init__.py
 │   │   ├── train.py            # trains TF-IDF + LinearSVC on labeled dataset
 │   │   ├── predict.py          # loads trained model, scores a command
-│   │   └── model.joblib        # serialized trained model (generated, gitignored until final)
+│   │   └── model.joblib        # serialized trained model (generated, gitignored)
 │   ├── llm/
+│   │   ├── __init__.py
 │   │   ├── client.py           # Groq API wrapper
 │   │   └── prompts.py          # structured prompt templates for explanation generation
 │   └── decision.py             # ties rule + classifier + LLM output into final flag/explain/confirm flow
@@ -23,6 +27,7 @@ intentguard/
 ├── tests/
 │   ├── test_rules.py
 │   ├── test_classifier.py
+│   ├── test_llm.py
 │   └── test_pipeline.py        # end-to-end tests using canned dangerous/safe commands
 ├── docs/                        # all docs from this dev system live here
 │   ├── project_context.md
@@ -32,6 +37,7 @@ intentguard/
 │   ├── folder_structure.md
 │   ├── tasks.md
 │   ├── design_prompt.md
+│   ├── test-cases.md           # manual test cases to run on Windows PowerShell
 │   ├── learnings.md
 │   ├── debug_log.md
 │   ├── experiment_log.md

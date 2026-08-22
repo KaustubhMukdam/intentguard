@@ -11,6 +11,7 @@ Read `project_context.md` first — paste it at the top of every AI chat/session
 | `folder_structure.md` | When creating new files — check where it belongs |
 | `tasks.md` | Start and end of every session — update checkboxes |
 | `design_prompt.md` | When building the confirmation-prompt output styling or optional demo banner |
+| `test-cases.md` | Manual test cases to run on Windows PowerShell (safe/dangerous/edge cases) |
 | `learnings.md` | End of every session, 5 min |
 | `debug_log.md` | Whenever a non-trivial bug is solved |
 | `experiment_log.md` | After every classifier training run |
@@ -18,5 +19,7 @@ Read `project_context.md` first — paste it at the top of every AI chat/session
 | `data_doc.md` | Building/extending the labeled dataset |
 | `eval.md` | Reporting classifier performance, writing the submission's results section |
 
-## Current status (24 Aug 2026)
-Pre-submission. MVP pipeline complete and tested (44 specs green). One day buffer before 25 Aug deadline. Next action: final demo run-through — see `tasks.md`.
+## Current status (15 Aug 2026)
+Pre-submission. MVP pipeline complete and tested (44 specs green). Runs end-to-end on
+**Windows PowerShell** (daemon transport fixed — Unix socket on Linux, TCP loopback on
+Windows). Next action: final demo run-through — see `tasks.md`.

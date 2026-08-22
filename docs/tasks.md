@@ -1,6 +1,6 @@
 # Tasks — IntentGuard
 
-> Note: hackathon runs 28 Jul – 25 Aug 2026. Today is 14 Aug — 11 days remain. Plan below is built for that.
+> Note: hackathon runs 28 Jul – 25 Aug 2026. Today is 15 Aug — 10 days remain. Plan below is built for that.
 
 ## In progress
 - [x] Set up `intentguard/` folder structure per `folder_structure.md`
@@ -50,6 +50,13 @@
 - [x] Final run-through of demo script, timed — cold-start fixed (~2.8s → ~200ms/command via persistent daemon + thin CLI)
 - [x] Fix anything that broke during polish — daemon prewarm + model cache
 - [ ] Prepare 2-3 sentence answer for: "what happens if someone bypasses the wrapper?" and "how does this scale to a fleet?" (anticipated judge questions) — drafted in `demo/demo_script.md` ACT 4; **your task is to keep these in your head, not code**
+
+## Post-Day-14 (Aug 15) — Windows transport fix
+- [x] **Found:** native Windows Python 3.11 has no `AF_UNIX` support → `intentguard.cli` reported "failed to start daemon" (daemon crashed at socket bind; unit suite passed because it never exercised cli/daemon)
+- [x] Fixed via `intentguard/socketutil.py` — Unix socket on Linux/WSL, TCP loopback (`127.0.0.1:45670`) on Windows; both daemon + CLI resolve the same endpoint
+- [x] Verified end-to-end on Windows PowerShell: safe pass-through, rule_engine flag, classifier flag (conf 0.73), y/N paths, live Groq explanations
+- [x] Added `docs/test-cases.md` — manual PowerShell test cases (safe / dangerous / edge / transport regression)
+- [ ] **Worth adding (low priority):** a unit test that exercises the cli↔daemon socket round-trip so this regression is caught in CI, not at demo time
 
 ## Aug 25 — Submit
 - [ ] Final submission before deadline
