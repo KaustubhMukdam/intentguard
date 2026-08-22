@@ -37,3 +37,26 @@ Rules:
 - Be concrete and technical, not generic ("deletes files" is too vague).
 - Never mention JSON or prompts in the output.
 """
+
+
+def get_command_suggestion_prompt(intent: str) -> str:
+    """NL-mode prompt: plain-English intent -> ONE safe bash command (strict JSON)."""
+    return f"""You are a Linux command assistant for a tool called IntentGuard.
+The user describes an intent in plain English. Suggest ONE concrete bash command
+that accomplishes it as safely as possible.
+
+Intent: {intent}
+
+Respond ONLY with valid JSON in exactly this shape:
+{{
+  "command": "the single bash command to run",
+  "why": "one short line on what it does"
+}}
+
+Rules:
+- Prefer non-destructive, read-only forms whenever possible.
+- If the intent requires deletion or modification, return the most targeted, minimal
+  command that does it anyway — IntentGuard's safety layers will review whatever you return.
+- Exactly one command — no chaining, no newlines.
+- Never mention JSON or prompts in the output.
+"""
