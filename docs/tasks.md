@@ -56,6 +56,10 @@
 - [x] Fixed via `intentguard/socketutil.py` — Unix socket on Linux/WSL, TCP loopback (`127.0.0.1:45670`) on Windows; both daemon + CLI resolve the same endpoint
 - [x] Verified end-to-end on Windows PowerShell: safe pass-through, rule_engine flag, classifier flag (conf 0.73), y/N paths, live Groq explanations
 - [x] Added `docs/test-cases.md` — manual PowerShell test cases (safe / dangerous / edge / transport regression)
+- [x] **Task 1 — latency:** daemon binds instantly (lazy `importlib` pipeline import, no blocking prewarm); Groq capped at 3s/0 retries; dead `llama-3.3-70b-versatile` replaced by `openai/gpt-oss-120b` (+ `GROQ_MODEL` env override); stderr hint on fallback explanations
+- [x] **Task 2 — transport round-trip unit test** (`tests/test_runtime.py`): real daemon on a stubbed test port, client talks through production code path
+- [x] **Task 3 — audit trail:** `intentguard/audit.py`, JSONL per flagged command in `~/.intentguard/audit.jsonl`, best-effort I/O, TDD'd in `tests/test_audit.py`
+- [ ] **Known issue (queued):** sklearn version mismatch — `model.joblib` pickled on 1.9.0, venv runs 1.5.0 (`InconsistentVersionWarning`). Fix: retrain locally (`python -m intentguard.classifier.train --ngram 1 3`) or pin sklearn
 - [ ] **Worth adding (low priority):** a unit test that exercises the cli↔daemon socket round-trip so this regression is caught in CI, not at demo time
 
 ## Aug 25 — Submit

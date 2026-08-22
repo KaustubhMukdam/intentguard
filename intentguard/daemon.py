@@ -24,9 +24,13 @@ def evaluate(text: str) -> dict:
     import importlib
     decision = importlib.import_module("intentguard.decision")
     try:
-        return decision.evaluate_command(text)
+        result = decision.evaluate_command(text)
     except Exception as e:  # model missing, API/parse error — never crash the loop
         return {"action": "error", "layer": "none", "reason": str(e)}
+    # Audit trail (best-effort): one JSONL line per flagged command
+    from intentguard.audit import log_flag
+    log_flag(text, result)
+    return result
 
 
 def _prewarm():

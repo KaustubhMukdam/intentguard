@@ -9,6 +9,7 @@ intentguard/
 │   ├── cli.py                  # thin client — spawns/reuses daemon, sends one command, renders prompt
 │   ├── daemon.py               # background daemon — holds loaded model, evaluates over socket
 │   ├── socketutil.py           # portable IPC endpoint (Unix socket on Linux, TCP loopback on Windows)
+│   ├── audit.py                # JSONL audit trail of flagged commands (~/.intentguard/audit.jsonl)
 │   ├── rules.py                # regex/pattern definitions for known-catastrophic commands
 │   ├── tokenizer.py            # shlex-based safe command tokenization
 │   ├── classifier/
@@ -28,6 +29,8 @@ intentguard/
 │   ├── test_rules.py
 │   ├── test_classifier.py
 │   ├── test_llm.py
+│   ├── test_audit.py
+│   ├── test_runtime.py
 │   └── test_pipeline.py        # end-to-end tests using canned dangerous/safe commands
 ├── docs/                        # all docs from this dev system live here
 │   ├── project_context.md
