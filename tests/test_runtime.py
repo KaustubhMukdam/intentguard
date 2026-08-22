@@ -74,5 +74,52 @@ class FallbackVisibilitySpec(unittest.TestCase):
         self.assertIsNone(warn_if_fallback(safe))
 
 
+class TransportRoundTripSpec(unittest.TestCase):
+    """SCENARIO: daemon binds fast and serves JSON over the socket (regression guard
+    for the 'failed to start daemon' class of bug). Runs fully stubbed — no sklearn."""
+
+    def test_client_talks_to_live_daemon_over_tcp(self):
+        import json
+        import socket
+        import threading
+        import time
+
+        import intentguard.cli as cli
+        import intentguard.daemon as daemon
+
+        stub = types.ModuleType("intentguard.decision")
+        stub.evaluate_command = lambda cmd: {"action": "execute", "_rt": True}
+        saved_modules = sys.modules.get("intentguard.decision")
+        saved_cli = (cli.addr, cli.is_unix)
+        saved_daemon = (daemon.addr, daemon.is_unix)
+
+        sys.modules["intentguard.decision"] = stub
+        port = 45679  # test-only port;
+        cli.addr = lambda: ("127.0.0.1", port)
+        cli.is_unix = lambda: False
+        daemon.addr = lambda: ("127.0.0.1", port)
+        daemon.is_unix = lambda: False
+        try:
+            threading.Thread(target=daemon.serve, daemon=True).start()
+            # poll up to 2s — proves bind happens without heavy imports
+            deadline = time.monotonic() + 2.0
+            result = None
+            last_err = None
+            while time.monotonic() < deadline:
+                try:
+                    result = cli.eval_via_daemon("anything")
+                    break
+                except OSError as e:
+                    last_err = e
+                    time.sleep(0.05)
+            self.assertIsNotNone(
+                result, f"daemon never accepted a connection within 2s ({last_err})")
+            self.assertTrue(result.get("_rt"))
+        finally:
+            sys.modules["intentguard.decision"] = saved_modules
+            cli.addr, cli.is_unix = saved_cli
+            daemon.addr, daemon.is_unix = saved_daemon
+
+
 if __name__ == "__main__":
     unittest.main()
