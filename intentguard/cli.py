@@ -78,32 +78,40 @@ def ensure_daemon(sock: Path) -> bool:
     return False
 
 
-def eval_via_daemon(command: str) -> dict:
-    """Send a command to the daemon; returns the decision dict."""
+def _roundtrip(s: socket.socket, data: bytes) -> dict:
+    s.sendall(data)
+    raw = b""
+    while b"\n" not in raw:
+        chunk = s.recv(65536)
+        if not chunk:
+            break
+        raw += chunk
+    return json.loads(raw.split(b"\n", 1)[0])
+
+
+def _send(payload: dict) -> dict:
+    """Send one JSON payload to the daemon; returns the JSON reply."""
+    data = (json.dumps(payload) + "\n").encode()
     if is_unix():
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.settimeout(_DAEMON_WAIT_SECONDS)
             s.connect(str(socket_path()))
-            s.sendall((json.dumps({"command": command}) + "\n").encode())
-            raw = b""
-            while b"\n" not in raw:
-                chunk = s.recv(65536)
-                if not chunk:
-                    break
-                raw += chunk
-        return json.loads(raw.split(b"\n", 1)[0])
+            return _roundtrip(s, data)
     host, port = addr()
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(_DAEMON_WAIT_SECONDS)
         s.connect((host, port))
-        s.sendall((json.dumps({"command": command}) + "\n").encode())
-        raw = b""
-        while b"\n" not in raw:
-            chunk = s.recv(65536)
-            if not chunk:
-                break
-            raw += chunk
-    return json.loads(raw.split(b"\n", 1)[0])
+        return _roundtrip(s, data)
+
+
+def eval_via_daemon(command: str) -> dict:
+    """Send a command to the daemon; returns the decision dict."""
+    return _send({"command": command})
+
+
+def ask_via_daemon(intent: str) -> dict:
+    """NL mode: ask the daemon to suggest a command for an intent (pre-vetted)."""
+    return _send({"ask": intent})
 
 
 def render_warning(result: dict, command: str) -> str:
@@ -135,28 +143,10 @@ def warn_if_fallback(result: dict) -> None:
               file=sys.stderr)
 
 
-def main() -> int:
-    if len(sys.argv) < 2:
-        print("Usage: intentguard <command>", file=sys.stderr)
-        return 1
-
-    command = " ".join(sys.argv[1:])
-    sock = socket_path()
-
-    if not ensure_daemon(sock):
-        print("IntentGuard: failed to start daemon", file=sys.stderr)
-        return 1
-
-    result = eval_via_daemon(command)
+def confirm_flow(result: dict, display_cmd: str) -> int:
+    """Show the warning, read y/N. Returns process exit code."""
     warn_if_fallback(result)
-
-    if result.get("action") == "execute":
-        return 0
-    if result.get("action") == "error":
-        print(f"IntentGuard: {result.get('reason', 'error')}", file=sys.stderr)
-        return 1
-
-    prompt = render_warning(result, command)
+    prompt = render_warning(result, display_cmd)
     if not sys.stdout.isatty():
         for code in (RED, AMBER, GREEN, DIM, BOLD, RESET):
             prompt = prompt.replace(code, "")
@@ -172,6 +162,67 @@ def main() -> int:
         return 0
     print("Command aborted by IntentGuard")
     return 1
+
+
+def run_ask(intent: str) -> int:
+    """NL mode: suggest a command for the intent — only after it passes the pipeline."""
+    sock = socket_path()
+    if not ensure_daemon(sock):
+        print("IntentGuard: failed to start daemon", file=sys.stderr)
+        return 1
+
+    result = ask_via_daemon(intent)
+    if result.get("action") == "error":
+        print("IntentGuard: no safe suggestion for this intent.",
+              file=sys.stderr)
+        print(f"  ({result.get('reason', 'unknown')})", file=sys.stderr)
+        print('Tip: run a specific command directly: intentguard <command>',
+              file=sys.stderr)
+        return 1
+
+    cmd = result["command"]
+    print(f"Suggested command: {cmd}")
+    if result.get("why"):
+        print(f"{DIM}{result['why']}{RESET}" if sys.stdout.isatty() else f"({result['why']})")
+
+    verdict = result.get("verdict", {})
+    if verdict.get("action") == "execute":
+        print("IntentGuard check: safe to run.")
+        return 0
+
+    # The suggested command itself was flagged — show the same confirmation UI
+    return confirm_flow(verdict, cmd)
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if not args:
+        print('Usage: intentguard <command>   |   intentguard --ask "intent"',
+              file=sys.stderr)
+        return 1
+
+    if args[0] == "--ask":
+        if len(args) < 2:
+            print('Usage: intentguard --ask "describe your intent"', file=sys.stderr)
+            return 1
+        return run_ask(" ".join(args[1:]))
+
+    command = " ".join(args)
+    sock = socket_path()
+
+    if not ensure_daemon(sock):
+        print("IntentGuard: failed to start daemon", file=sys.stderr)
+        return 1
+
+    result = eval_via_daemon(command)
+
+    if result.get("action") == "execute":
+        return 0
+    if result.get("action") == "error":
+        print(f"IntentGuard: {result.get('reason', 'error')}", file=sys.stderr)
+        return 1
+
+    return confirm_flow(result, command)
 
 
 if __name__ == "__main__":

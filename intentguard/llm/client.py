@@ -11,7 +11,7 @@ import os
 
 from dotenv import load_dotenv
 
-from .prompts import get_explanation_prompt
+from .prompts import get_command_suggestion_prompt, get_explanation_prompt
 
 load_dotenv()
 
@@ -82,3 +82,26 @@ def explain_command(command, flagged_by, reason, risk_level="high", client_facto
         }
     except Exception as e:  # missing key, rate limit, parse failure, network
         return get_fallback_explanation(command, str(e))
+
+
+def suggest_command(intent: str, client_factory=None) -> dict:
+    """
+    NL mode: turn a plain-English intent into ONE suggested bash command.
+
+    Returns {"command": str|None, "why": str}; command is None + fallback flag
+    on any API/parse failure so the caller degrades gracefully.
+    """
+    prompt = get_command_suggestion_prompt(intent)
+    try:
+        client = (client_factory or _get_groq_client)()
+        completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model=get_model_id(),
+            temperature=0.2,
+            max_tokens=800,  # gpt-oss reasons before content; 200 risked truncation
+            response_format={"type": "json_object"},
+        )
+        parsed = json.loads(completion.choices[0].message.content)
+        return {"command": parsed.get("command"), "why": parsed.get("why", "")}
+    except Exception as e:  # same failure classes as explain_command
+        return {"command": None, "why": "", "fallback": True, "error": str(e)}

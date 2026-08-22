@@ -42,6 +42,19 @@ def _prewarm():
         pass  # no model yet — classifier path will report the error per command
 
 
+def handle_ask(intent: str) -> dict:
+    """NL mode: suggest a command for an intent, then vet it through the pipeline.
+    Lives in the daemon because Groq/dotenv are loaded here, not in the thin CLI."""
+    from intentguard.llm.client import suggest_command
+    sugg = suggest_command(intent)
+    if not sugg.get("command"):
+        return {"action": "error",
+                "reason": f"LLM unavailable ({sugg.get('error', 'no suggestion')})"}
+    verdict = evaluate(sugg["command"])
+    return {"action": "suggest", "command": sugg["command"],
+            "why": sugg.get("why", ""), "verdict": verdict}
+
+
 def serve():
     unix = is_unix()
     server = socket.socket(socket.AF_UNIX if unix else socket.AF_INET,
@@ -73,8 +86,11 @@ def serve():
                 raw += chunk
                 if b"\n" in raw:
                     break
-            text = json.loads(raw.decode().split("\n", 1)[0])["command"]
-            reply = json.dumps(evaluate(text)).encode() + b"\n"
+            payload = json.loads(raw.decode().split("\n", 1)[0])
+            if "ask" in payload:
+                reply = json.dumps(handle_ask(payload["ask"])).encode() + b"\n"
+            else:
+                reply = json.dumps(evaluate(payload["command"])).encode() + b"\n"
             conn.sendall(reply)
         except Exception:
             pass

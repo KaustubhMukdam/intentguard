@@ -2,6 +2,20 @@
 
 > Note: hackathon runs 28 Jul – 25 Aug 2026. Today is 15 Aug — 10 days remain. Plan below is built for that.
 
+## Current queue (updated 15 Aug evening)
+| # | Task | State |
+|---|------|-------|
+| 1 | Latency fix (daemon boot race, fast-fail LLM, model swap) | ✅ done |
+| 2 | Transport round-trip unit test | ✅ done |
+| 3 | Audit trail (`audit.py`, JSONL) | ✅ done |
+| 4 | Recursive-force-delete rule (`rm -rf myproject` now prompts) | ✅ done |
+| 5 | NL mode (`--ask "intent"` → safe suggested command) | 🔵 in progress |
+| 6 | Real-time shell integration (wrapper polish, no `python -m …` typing) | ⬜ next |
+| — | Retrain model locally (kills sklearn 1.9-vs-1.5 warning) | ⬜ queued |
+| — | Final docs batch (learnings/eval numbers after new rule) | ⬜ queued |
+| — | Backup demo video (your manual task) | ⬜ before submission |
+
+
 ## In progress
 - [x] Set up `intentguard/` folder structure per `folder_structure.md`
 - [x] Start curating `data/commands_dataset.csv` — labeled safe vs. risky commands
@@ -60,7 +74,8 @@
 - [x] **Task 2 — transport round-trip unit test** (`tests/test_runtime.py`): real daemon on a stubbed test port, client talks through production code path
 - [x] **Task 3 — audit trail:** `intentguard/audit.py`, JSONL per flagged command in `~/.intentguard/audit.jsonl`, best-effort I/O, TDD'd in `tests/test_audit.py`
 - [ ] **Known issue (queued):** sklearn version mismatch — `model.joblib` pickled on 1.9.0, venv runs 1.5.0 (`InconsistentVersionWarning`). Fix: retrain locally (`python -m intentguard.classifier.train --ngram 1 3`) or pin sklearn
-- [ ] **Worth adding (low priority):** a unit test that exercises the cli↔daemon socket round-trip so this regression is caught in CI, not at demo time
+- [x] **Task 4 — recursive-force rule:** `rm -rf <any non-temp path>` now prompts (medium risk); `/tmp` + `/var/tmp` exempt; system dirs stay critical; plain `rm file.txt` still frictionless. TDD'd in `tests/test_rules.py::RecursiveForceDeleteSpec`
+- [x] ~~transport round-trip unit test~~ → **done as Task 2** (`tests/test_runtime.py::TransportRoundTripSpec`)
 
 ## Aug 25 — Submit
 - [ ] Final submission before deadline
@@ -69,6 +84,6 @@
 - [ ] None yet
 
 ## Ideas / backlog (only if time remains after Day 12)
-- [ ] Natural-language mode (borrowing from Idea 7's spirit, as a bonus feature)
-- [ ] Session logging/audit trail for the "scalability" pitch
-- [ ] zsh support
+- [ ] Natural-language mode — **being built now as Task 5** (`--ask`)
+- [x] Session logging/audit trail for the "scalability" pitch — **done as Task 3**
+- [ ] zsh support — *recommend skipping*: bash is the stated MVP target, disclose in pitch instead
