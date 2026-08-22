@@ -19,9 +19,18 @@ RM_FLAGS = (
 )
 RM_TARGET = (
     r'(/(\s|$|[;&|])|/\*|'
-    r'/(?:etc|usr|var|bin|sbin|lib|boot|home|root)\b)'
+    # var but not var/tmp — /var/tmp is temp space, handled by the medium-risk net below
+    r'/(?:etc|usr|var(?!/tmp)|bin|sbin|lib|boot|home|root)\b)'
 )
 DANGEROUS_RM_PATTERN = r'\brm\b\s+' + RM_FLAGS + RM_TARGET
+# recursive + force delete of ANY path outside /tmp & /var/tmp.
+# Closes the accidental-damage gap (`rm -rf myproject` used to sail through);
+# system dirs above stay critical, plain file deletes (no -r) unaffected.
+DANGEROUS_RM_RECURSIVE_PATTERN = (
+    r'\brm\b\s+' + RM_FLAGS +
+    r'(?!/tmp(?:/\S*)?(?:\s|$)|/var/tmp(?:/\S*)?(?:\s|$))'
+    r'\S+'
+)
 # dd writing to a block device (of=/dev/sdX, /dev/hdX, /dev/vdX, /dev/mmcblkN, /dev/nvme)
 DANGEROUS_DD_PATTERN = r'\bdd\b.*\bof\s*=\s*/dev/(sd|hd|vd|mmcblk|nvme)'
 # shell redirection writing directly to a block device
@@ -52,6 +61,8 @@ DANGEROUS_PACKAGE_PATTERN = (
 COMPILED_PATTERNS = [
     (re.compile(DANGEROUS_RM_PATTERN, re.IGNORECASE),
      "rm -rf on root or system directory", "critical"),
+    (re.compile(DANGEROUS_RM_RECURSIVE_PATTERN, re.IGNORECASE),
+     "recursive force delete of a non-temporary path", "medium"),
     (re.compile(DANGEROUS_DD_PATTERN, re.IGNORECASE),
      "dd writing to a block device", "critical"),
     (re.compile(DANGEROUS_RAW_DEVICE_WRITE, re.IGNORECASE),
