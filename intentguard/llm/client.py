@@ -15,6 +15,14 @@ from .prompts import get_explanation_prompt
 
 load_dotenv()
 
+# Groq decommissions model ids periodically (llama-3.3-70b-versatile died Aug 2026);
+# GROQ_MODEL env var overrides without a code change.
+DEFAULT_MODEL = "openai/gpt-oss-120b"
+
+
+def get_model_id() -> str:
+    return os.getenv("GROQ_MODEL", DEFAULT_MODEL)
+
 
 def _get_groq_client():
     """Lazily import and construct the real Groq client (key required)."""
@@ -23,7 +31,9 @@ def _get_groq_client():
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY not set — add it to .env (see .env.example)")
-    return Groq(api_key=api_key)
+    # timeout<=3s + zero retries keeps the flagged-command path under ~3s worst
+    # case; SDK default retries turn one failure into ~10s of hanging.
+    return Groq(api_key=api_key, timeout=3.0, max_retries=0)
 
 
 def get_fallback_explanation(command: str, error: str) -> dict:
@@ -58,7 +68,7 @@ def explain_command(command, flagged_by, reason, risk_level="high", client_facto
         client = (client_factory or _get_groq_client)()
         completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
+            model=get_model_id(),
             temperature=0.3,
             max_tokens=500,
             response_format={"type": "json_object"},

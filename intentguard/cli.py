@@ -127,6 +127,14 @@ def render_warning(result: dict, command: str) -> str:
     return "\n".join(lines)
 
 
+def warn_if_fallback(result: dict) -> None:
+    """stderr hint when the explanation came from local fallback (LLM unreachable)."""
+    explanation = result.get("explanation") or {}
+    if explanation.get("fallback"):
+        print(f"IntentGuard: LLM unavailable ({explanation.get('error', 'unknown')})",
+              file=sys.stderr)
+
+
 def main() -> int:
     if len(sys.argv) < 2:
         print("Usage: intentguard <command>", file=sys.stderr)
@@ -140,6 +148,7 @@ def main() -> int:
         return 1
 
     result = eval_via_daemon(command)
+    warn_if_fallback(result)
 
     if result.get("action") == "execute":
         return 0

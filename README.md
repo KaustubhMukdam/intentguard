@@ -81,7 +81,9 @@ A recall of 0.968 on the risky class means the classifier misses ~3 dangerous co
 ```
 shell/intentguard.sh       bash wrapper (source in .bashrc)
 intentguard/
-  cli.py                   entrypoint + confirmation UI
+  cli.py                   thin client + confirmation UI
+  daemon.py                background daemon (holds loaded model)
+  socketutil.py            portable IPC (Unix socket / TCP loopback)
   decision.py              orchestrates the 3 layers
   rules.py                 regex pattern list
   tokenizer.py             shlex-based safe tokenization
@@ -89,8 +91,12 @@ intentguard/
   llm/                     client.py (Groq) · prompts.py
 data/                      self-curated labeled dataset (318 commands)
 tests/                     44 BDD specs, all green
-docs/                      full context (PRD, architecture, eval, model card…)
+docs/                      full context (PRD, architecture, eval, model card, test-cases)
 ```
+
+Runs on Linux/WSL and **Windows PowerShell** — the CLI speaks to a background
+daemon over a Unix socket on Linux and TCP loopback on Windows, so the demo
+works from either environment.
 
 ## Honest scoping (see docs/)
 

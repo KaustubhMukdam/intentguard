@@ -14,12 +14,15 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from intentguard import decision
 from intentguard.socketutil import addr, is_unix, socket_path
 
 
 def evaluate(text: str) -> dict:
     """Evaluate one command through the real pipeline (rule + classifier + LLM)."""
+    # Lazy import via import_module: consults sys.modules directly, so resolution
+    # truly happens at call time and sklearn/joblib never block daemon startup.
+    import importlib
+    decision = importlib.import_module("intentguard.decision")
     try:
         return decision.evaluate_command(text)
     except Exception as e:  # model missing, API/parse error — never crash the loop
@@ -76,5 +79,4 @@ def serve():
 
 
 if __name__ == "__main__":
-    _prewarm()
-    serve()
+    serve()  # binds immediately; _prewarm runs in the background thread inside serve()

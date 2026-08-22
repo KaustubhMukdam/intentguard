@@ -29,7 +29,7 @@
 Reliably separates commands with clear destructive verbs (rm, dd, mkfs, chmod, chown, shred, wipefs, ufw/iptables, destructive package removal) from routine commands (ls, git, cd, pip, docker, systemctl status, ssh, curl). Perfect precision on the risky class in the held-out test — zero false alarms in 64 samples.
 
 ## Known limitations
-- Missed `systemctl stop firewalld` in testing (predicted safe) — service-stop commands targeting security daemons are an edge the current data under-represents.
+- Missed `systemctl stop firewalld` in initial testing (predicted safe) — since addressed by adding a firewall pattern to the rule engine (`systemctl stop|disable firewalld`, `service firewalld stop`) rather than the model; service-stop commands targeting security daemons remain a category the training data under-represents.
 - Struggles with novel/obfuscated dangerous commands not resembling training examples.
 - No context awareness: `git push --force` is fine solo, catastrophic on a shared branch — the model labels by typical-case risk only.
 

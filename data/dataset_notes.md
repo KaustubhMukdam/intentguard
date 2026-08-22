@@ -11,7 +11,7 @@
 - **Created:** 11 Aug 2026, iteratively through Days 1-2.
 
 ## Structure
-- **Rows:** 65 commands (as of initial creation)
+- **Rows:** 318 commands (as of 14 Aug 2026)
 - **Columns:** `command` (string, raw command text), `label` (`safe` / `risky`)
 - **Target column:** `label`
 - **Feature types:** Text (command string) only for the MVP — no additional metadata features to keep the classifier simple and explainable.
@@ -37,7 +37,7 @@
 
 ## Known issues
 - Dataset size is small relative to a production classifier (hackathon time constraint) — documented honestly as a scoping limitation, not hidden.
-- Class balance: 32 safe, 33 risky (roughly balanced)
+- Class balance: 165 safe, 153 risky (roughly balanced, ~52% / ~48%)
 - Coverage skews toward commands I'm personally familiar with — general Linux admin, Python/ML dev workflows.
 - Ambiguous/context-dependent commands (e.g. `git push --force`) are labeled based on typical-case risk, with the limitation noted.
 
