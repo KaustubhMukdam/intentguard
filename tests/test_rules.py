@@ -94,6 +94,37 @@ class RuleEngineSpec(unittest.TestCase):
         self.assertTrue(check_rule_match("rm -rf '/'")["matched"])
 
 
+class RecursiveForceDeleteSpec(unittest.TestCase):
+    """SCENARIO: recursive force-delete of ANY non-temp path asks for confirmation
+    (problem statement: prevent accidental damage — `rm -rf myproject` must not
+    sail through). System dirs stay critical via the earlier pattern; /tmp stays
+    safe per the dataset; plain file deletes stay frictionless."""
+
+    def test_recursive_force_delete_of_arbitrary_path_is_flagged(self):
+        for cmd in [
+            "rm -rf myproject",
+            "rm -rf ./build",
+            "rm -rfv src",
+            "rm -r -f notes/",
+            "rm --recursive --force dist",
+            "sudo rm -rf workdir",
+            "rm -rf build && echo ok",
+        ]:
+            result = check_rule_match(cmd)
+            self.assertTrue(result["matched"], cmd)
+
+    def test_recursive_force_delete_is_medium_risk(self):
+        self.assertEqual(check_rule_match("rm -rf myproject")["risk_level"], "medium")
+
+    def test_temp_paths_still_pass(self):
+        for cmd in ["rm -rf /tmp/test_dir", "rm -rf /var/tmp/cache"]:
+            self.assertFalse(check_rule_match(cmd)["matched"], cmd)
+
+    def test_plain_and_force_only_deletes_still_pass(self):
+        for cmd in ["rm file.txt", "rm -f file.txt", "rm -r old_dir"]:
+            self.assertFalse(check_rule_match(cmd)["matched"], cmd)
+
+
 class SafePassThroughSpec(unittest.TestCase):
     """SCENARIO: Everyday safe commands pass with zero false positives"""
 
