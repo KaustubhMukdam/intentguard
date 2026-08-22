@@ -48,7 +48,7 @@ A bash function intercepts every command typed in a monitored shell session befo
 3. `cli.py` (thin client, stdlib-only, ~50ms startup) spawns or reuses the background **daemon** (`daemon.py`, which holds the loaded model + sklearn imports so per-command cold start is avoided). IPC is a Unix socket on Linux/WSL and a TCP loopback (`127.0.0.1:45670`) on native Windows (Python 3.11 has no `AF_UNIX` support) — see `socketutil.py`.
 4. Rule engine tokenizes with `shlex` and checks against the pattern list (`rules.py`). If matched → jump straight to Layer 3 with a `rule_match` reason attached (skip classifier, save time).
 5. If no rule match, the command is vectorized (TF-IDF) and scored by the trained classifier. If confidence is above the risk threshold → Layer 3. If safe → return control to bash immediately.
-6. Layer 3 (Groq call) receives the command + which layer flagged it + why, and returns a structured explanation (what/impact/alternative).
+6. Layer 3 (Groq call) receives the command + which layer flagged it + why, and returns a structured explanation (what/impact/alternative). The daemon appends a best-effort JSONL record of every flagged command to `~/.intentguard/audit.jsonl` (session audit trail — the fleet-scalability story).
 7. CLI prints the explanation and prompts for confirmation.
 8. On confirm → `cli.py` exits 0 and **the bash wrapper executes the command** (`eval "$command"`). On decline → exits 1, aborted, safer alternative is optionally offered to run instead.
 
