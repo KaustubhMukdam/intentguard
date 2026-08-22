@@ -7,3 +7,4 @@ intentguard/classifier/model.joblib
 .env
 demo/demo_script.md
 venv
+docs/imp.md
