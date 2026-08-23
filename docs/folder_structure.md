@@ -29,6 +29,7 @@ intentguard/
 │   ├── test_rules.py
 │   ├── test_classifier.py
 │   ├── test_llm.py
+│   ├── test_nl.py
 │   ├── test_audit.py
 │   ├── test_runtime.py
 │   └── test_pipeline.py        # end-to-end tests using canned dangerous/safe commands

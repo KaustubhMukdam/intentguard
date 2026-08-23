@@ -150,4 +150,21 @@ or that `socketutil.py` is on disk.
 python -m pytest tests -q
 ```
 
-Expected: `44 passed`.
+Expected: `78 passed`.
+
+---
+
+## H. Natural-language mode (NL)
+
+```powershell
+python -m intentguard.cli --ask "show disk usage in human readable form"
+# EXPECT: "Suggested command: df -h" + "safe to run."
+
+python -m intentguard.cli --ask "delete everything in /etc"
+# EXPECT: a destructive suggestion that OUR OWN pipeline flags with the red
+# warning — proof AI-generated output is vetted too. Answer N.
+```
+
+Note: on Groq free tier you may hit `429 rate_limit_exceeded` after several
+flagged commands in a row. That's expected — the prompt still renders with the
+local fallback explanation and never stalls. Wait ~30s or use a fresh key.
