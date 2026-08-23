@@ -121,5 +121,89 @@ class TransportRoundTripSpec(unittest.TestCase):
             daemon.addr, daemon.is_unix = saved_daemon
 
 
+class DaemonProtocolSpec(unittest.TestCase):
+    """SCENARIO: stale daemons restart themselves — CLI pings the daemon's code
+    version; on mismatch it sends shutdown instead of talking to old code."""
+
+    _next_port = 45681  # unique port per test — leaked daemons from earlier
+    # tests must never collide (Windows SO_REUSEADDR allows double binds)
+
+    def setUp(self):
+        import intentguard.cli as cli
+        import intentguard.daemon as daemon
+        self.cli, self.daemon = cli, daemon
+
+        type(self)._next_port += 1
+        self.port = type(self)._next_port
+
+        stub = types.ModuleType("intentguard.decision")
+        stub.evaluate_command = lambda cmd: {"action": "execute"}
+        self.saved_modules = sys.modules.get("intentguard.decision")
+        sys.modules["intentguard.decision"] = stub
+
+        self.saved_cli = (cli.addr, cli.is_unix)
+        self.saved_daemon = (daemon.addr, daemon.is_unix)
+        cli.addr = lambda: ("127.0.0.1", self.port)
+        cli.is_unix = lambda: False
+        daemon.addr = lambda: ("127.0.0.1", self.port)
+        daemon.is_unix = lambda: False
+
+    def tearDown(self):
+        sys.modules["intentguard.decision"] = self.saved_modules
+        self.cli.addr, self.cli.is_unix = self.saved_cli
+        self.daemon.addr, self.daemon.is_unix = self.saved_daemon
+
+    def _start(self):
+        import threading
+        threading.Thread(target=self.daemon.serve, daemon=True).start()
+
+    def test_ping_reports_current_code_version(self):
+        import time
+        from intentguard.socketutil import code_version
+
+        self._start()
+        deadline = time.monotonic() + 2.0
+        last = None
+        while time.monotonic() < deadline:
+            try:
+                reply = self.cli._send({"ping": 1})
+                break
+            except OSError as e:
+                last = e
+                time.sleep(0.05)
+        else:
+            self.fail(f"daemon never came up ({last})")
+        self.assertEqual(reply.get("version"), code_version())
+
+    def test_shutdown_stops_the_daemon(self):
+        import json
+        import socket
+        import time
+
+        self._start()
+        deadline = time.monotonic() + 2.0
+        while time.monotonic() < deadline:
+            try:
+                self.cli._send({"ping": 1})
+                break
+            except OSError:
+                time.sleep(0.05)
+
+        reply = self.cli._send({"shutdown": 1})
+        self.assertTrue(reply.get("bye"))
+
+        # port must stop accepting shortly after
+        gone = False
+        deadline = time.monotonic() + 2.0
+        while time.monotonic() < deadline:
+            try:
+                with socket.create_connection(("127.0.0.1", self.port), timeout=0.3):
+                    time.sleep(0.05)
+            except OSError:
+                gone = True
+                break
+        self.assertTrue(gone, "daemon still accepting after shutdown")
+
+
 if __name__ == "__main__":
     unittest.main()

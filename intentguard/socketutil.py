@@ -31,3 +31,14 @@ def addr() -> tuple:
     if is_unix():
         return (str(socket_path()), 0)
     return ("127.0.0.1", _TCP_PORT)
+
+
+def code_version() -> str:
+    """Hash of the package source — lets CLI detect stale daemons after edits."""
+    h = hashlib.md5()
+    root = Path(__file__).resolve().parent
+    for p in sorted(root.rglob("*.py")):
+        if "__pycache__" in p.parts:
+            continue
+        h.update(p.read_bytes())
+    return h.hexdigest()[:8]
