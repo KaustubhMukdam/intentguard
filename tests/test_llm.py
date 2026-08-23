@@ -32,6 +32,7 @@ def make_groq_fake(response_content: str):
 
     def capture():
         calls["messages"] = client.chat.completions.create.call_args.kwargs["messages"]
+        calls["kwargs"] = client.chat.completions.create.call_args.kwargs
         return calls
 
     return factory, capture
@@ -74,6 +75,29 @@ class ExplainerSpec(unittest.TestCase):
         fallback = get_fallback_explanation("rm -rf /", "rate limited")
         for key in ("what_it_does", "impact", "safer_alternative"):
             self.assertIn(key, fallback)
+
+    def test_reasoning_models_get_big_token_budget(self):
+        """gpt-oss spends reasoning tokens before JSON; budget must be set via
+        the documented max_completion_tokens knob (legacy max_tokens may be
+        ignored for reasoning models -> 'max completion tokens reached')."""
+        factory, capture = make_groq_fake('{}')
+        explain_command("rm -rf /", "rule_engine", "x", client_factory=factory)
+        self.assertGreaterEqual(capture()["kwargs"]["max_completion_tokens"], 1500)
+        self.assertNotIn("max_tokens", capture()["kwargs"])
+
+    def test_reasoning_effort_is_low_for_structured_output(self):
+        """Groq GPT-OSS: 'low' keeps reasoning short so the JSON always fits."""
+        factory, capture = make_groq_fake('{}')
+        explain_command("rm -rf /", "rule_engine", "x", client_factory=factory)
+        self.assertEqual(capture()["kwargs"].get("reasoning_effort"), "low")
+
+    def test_prompt_shows_shell_quoted_command(self):
+        """Production contract: cli.normalize_input_command already delivers
+        per-token-quoted commands; the prompt must PRESERVE that grouping."""
+        from intentguard.llm.prompts import get_explanation_prompt
+        prompt = get_explanation_prompt(
+            "rm -rf '/home/kaust/ig test dir'", "rule_engine", "x")
+        self.assertIn("'/home/kaust/ig test dir'", prompt)
 
     def test_prompt_contract_is_json(self):
         prompt = get_explanation_prompt("rm -rf /", "rule_engine", "system dir", "critical")

@@ -50,6 +50,13 @@ class SuggestCommandSpec(unittest.TestCase):
         self.assertIsNone(result["command"])
         self.assertTrue(result.get("fallback"))
 
+    def test_suggestion_uses_low_reasoning_effort(self):
+        from intentguard.llm.client import suggest_command
+
+        factory, capture = make_groq_fake('{"command": "ls", "why": ""}')
+        suggest_command("list files", client_factory=factory)
+        self.assertEqual(capture()["kwargs"].get("reasoning_effort"), "low")
+
 
 if __name__ == "__main__":
     unittest.main()

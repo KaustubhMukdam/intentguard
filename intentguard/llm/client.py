@@ -70,7 +70,8 @@ def explain_command(command, flagged_by, reason, risk_level="high", client_facto
             messages=[{"role": "user", "content": prompt}],
             model=get_model_id(),
             temperature=0.3,
-            max_tokens=500,
+            max_completion_tokens=4096,  # documented knob; legacy max_tokens may be ignored for reasoning models
+            reasoning_effort="low",  # GPT-OSS: short thinking so JSON always fits
             response_format={"type": "json_object"},
         )
         raw = completion.choices[0].message.content
@@ -98,7 +99,8 @@ def suggest_command(intent: str, client_factory=None) -> dict:
             messages=[{"role": "user", "content": prompt}],
             model=get_model_id(),
             temperature=0.2,
-            max_tokens=800,  # gpt-oss reasons before content; 200 risked truncation
+            max_completion_tokens=4096,  # same reasoning-token caveat as explain_command
+            reasoning_effort="low",
             response_format={"type": "json_object"},
         )
         parsed = json.loads(completion.choices[0].message.content)

@@ -4,7 +4,6 @@ Ties rule engine, classifier, and LLM output into final flag/explain/confirm flo
 """
 
 from . import rules
-from .classifier import predict
 from .llm import client as llm_client
 
 # Classifier confidence threshold for flagging as risky (can be tuned)
@@ -43,7 +42,9 @@ def evaluate_command(command: str, explain_fn=None) -> dict:
             ),
         }
 
-    # Layer 2 — ML classifier (ambiguous/novel commands only)
+    # Layer 2 — ML classifier (ambiguous/novel commands only).
+    # Imported lazily: rule-matched commands never pay sklearn load time.
+    from .classifier import predict
     classifier_result = predict.predict_command(command)
     if classifier_result["is_risky"] and classifier_result["confidence"] >= RISK_THRESHOLD:
         reason = f"ML classifier detected risky intent (confidence {classifier_result['confidence']:.2f})"

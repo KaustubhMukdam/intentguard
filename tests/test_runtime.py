@@ -33,6 +33,20 @@ class DaemonLazyImportSpec(unittest.TestCase):
         self.assertTrue(result.get("_stub"),
                         "daemon.evaluate() must look up decision at call time")
 
+    def test_evaluate_returns_error_when_pipeline_import_fails(self):
+        """Missing deps (e.g. bare WSL python) must yield an error reply,
+        never crash the serve loop with an empty response."""
+        from unittest.mock import patch
+
+        import intentguard.daemon as daemon
+
+        def boom(name, *a, **k):
+            raise ModuleNotFoundError("No module named 'joblib'")
+        with patch("importlib.import_module", side_effect=boom):
+            result = daemon.evaluate("rm -rf /")
+        self.assertEqual(result.get("action"), "error")
+        self.assertIn("joblib", result.get("reason", ""))
+
 
 class GroqFastFailSpec(unittest.TestCase):
     """SCENARIO: Groq client cannot hang the flagged-command path."""
@@ -72,6 +86,67 @@ class FallbackVisibilitySpec(unittest.TestCase):
 
         safe = {"action": "execute"}
         self.assertIsNone(warn_if_fallback(safe))
+
+
+class AskArgParsingSpec(unittest.TestCase):
+    """SCENARIO: --ask must work identically typed directly OR through the
+    bash wrapper (printf %q glues '--ask' and the intent into one argv word)."""
+
+    def test_direct_form(self):
+        from intentguard.cli import parse_ask_intent
+        self.assertEqual(parse_ask_intent(["--ask", "show disk usage"]),
+                         "show disk usage")
+
+    def test_wrapper_glued_form_with_escapes(self):
+        from intentguard.cli import parse_ask_intent
+        self.assertEqual(
+            parse_ask_intent(["--ask show\\ disk\\ usage\\ in\\ human\\ readable\\ form"]),
+            "show disk usage in human readable form")
+
+    def test_non_ask_returns_none(self):
+        from intentguard.cli import parse_ask_intent
+        self.assertIsNone(parse_ask_intent(["ls", "-la"]))
+
+    def test_bare_ask_returns_none(self):
+        from intentguard.cli import parse_ask_intent
+        self.assertIsNone(parse_ask_intent(["--ask"]))
+
+
+class InputNormalizationSpec(unittest.TestCase):
+    """SCENARIO: wrapper sends ONE %q-escaped argv word ('rm -rf x\\ y ');
+    downstream must get per-token shell-quoted form so spaced paths stay ONE
+    target for the rules AND read unambiguously to the LLM."""
+
+    def test_single_escaped_word_unwrapped_and_grouped(self):
+        from intentguard.cli import normalize_input_command
+        self.assertEqual(normalize_input_command(["rm -rf ig\\ test\\ dir"]),
+                         "rm -rf 'ig test dir'")
+
+    def test_multi_word_args_keep_true_boundaries(self):
+        from intentguard.cli import normalize_input_command
+        self.assertEqual(normalize_input_command(["rm", "-rf", "my dir"]),
+                         "rm -rf 'my dir'")
+
+    def test_plain_single_word_unchanged(self):
+        from intentguard.cli import normalize_input_command
+        self.assertEqual(normalize_input_command(["ls"]), "ls")
+
+    def test_output_still_matches_rules(self):
+        """Quoted output must not break rule matching (rules shlex-split it)."""
+        from intentguard.cli import normalize_input_command
+        from intentguard.rules import check_rule_match
+
+        cmd = normalize_input_command(["rm -rf /home/k/ig\\ test\\ dir"])
+        self.assertEqual(cmd, "rm -rf '/home/k/ig test dir'")
+        # /home is a protected system root -> critical tier wins (documented)
+        self.assertEqual(check_rule_match(cmd)["risk_level"], "critical")
+
+        # non-system spaced path -> the medium recursive-force net
+        proj = normalize_input_command(["rm", "-rf", "build output"])
+        self.assertEqual(proj, "rm -rf 'build output'")
+        result = check_rule_match(proj)
+        self.assertTrue(result["matched"])
+        self.assertEqual(result["risk_level"], "medium")
 
 
 class TransportRoundTripSpec(unittest.TestCase):
@@ -175,8 +250,34 @@ class DaemonProtocolSpec(unittest.TestCase):
             self.fail(f"daemon never came up ({last})")
         self.assertEqual(reply.get("version"), code_version())
 
+    def test_ping_reports_version_captured_at_startup(self):
+        """The daemon must answer with the version snapshotted when IT started,
+        not re-hash disk at ping time — otherwise stale in-memory code always
+        'matches' and never restarts (regression guard for exactly that bug)."""
+        import time
+        from unittest.mock import patch
+        from intentguard import socketutil
+
+        startup_version = socketutil.code_version()
+        self._start()
+        deadline = time.monotonic() + 2.0
+        last = None
+        while time.monotonic() < deadline:
+            try:
+                reply = self.cli._send({"ping": 1})
+                break
+            except OSError as e:
+                last = e
+                time.sleep(0.05)
+        else:
+            self.fail(f"daemon never came up ({last})")
+
+        # simulate code edits AFTER daemon boot: disk hash changes
+        with patch.object(socketutil, "code_version", lambda: "CHANGED"):
+            self.assertEqual(reply.get("version"), startup_version)
+            self.assertNotEqual(reply.get("version"), "CHANGED")
+
     def test_shutdown_stops_the_daemon(self):
-        import json
         import socket
         import time
 
