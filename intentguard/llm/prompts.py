@@ -3,6 +3,16 @@ Prompt templates for IntentGuard LLM layer
 Structured prompts for explanation generation
 """
 
+import shlex
+
+
+def _shell_quoted(command: str) -> str:
+    """Canonical quoted form so spaced paths read as ONE target, not many."""
+    try:
+        return shlex.join(shlex.split(command))
+    except ValueError:
+        return command
+
 
 def get_explanation_prompt(command: str, flagged_by: str, reason: str, risk_level: str = "high") -> str:
     """
@@ -20,7 +30,7 @@ def get_explanation_prompt(command: str, flagged_by: str, reason: str, risk_leve
     return f"""You are a Linux safety expert for a tool called IntentGuard. A user tried to
 run a command and it was flagged as risky. Explain it so a non-expert understands in seconds.
 
-Command: {command}
+Command: {_shell_quoted(command)}
 Flagged by: {flagged_by}
 Risk level: {risk_level}
 Reason: {reason}

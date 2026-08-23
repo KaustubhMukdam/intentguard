@@ -11,10 +11,12 @@
 | 4 | Recursive-force-delete rule (`rm -rf myproject` now prompts) | ✅ done |
 | 5 | NL mode (`--ask "intent"` → vetted suggestion) | ✅ done |
 | 5b | Stale-daemon auto-restart (ping/shutdown code-version handshake) | ✅ done |
-| 6 | Real-time shell integration (wrapper polish, no `python -m …` typing) | ⬜ next |
+| 6 | Real-time shell integration — prefix wrapper quoting fixed (`printf %q` + `shlex.quote` canonical form); optional `shell/intentguard-demo.sh` shim mode (throwaway-only, fail-closed, `unshim` to revert); `--ask` works via wrapper | ✅ done |
 | — | Retrain model locally (kills sklearn 1.9-vs-1.5 warning) | ⬜ queued |
-| — | Final docs batch (learnings/eval numbers after new rule) | ⬜ queued |
+| — | Final docs batch: README feature list, test-cases NL section | ⬜ queued |
 | — | Backup demo video (your manual task) | ⬜ before submission |
+
+**Verified end-to-end (15 Aug, WSL):** flagged→real LLM explanation ✓ · N aborts/y proceeds ✓ · /tmp exempt ✓ · `--ask` safe+suggestion ✓ · destructive intent caught by own pipeline ✓ · demo shims ✓ · audit JSONL ✓. A Groq **429 rate-limit** during the sweep is expected free-tier behavior and degrades gracefully to the local fallback explanation — not a bug.
 
 
 ## In progress

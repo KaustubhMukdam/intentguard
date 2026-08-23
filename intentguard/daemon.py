@@ -16,16 +16,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from intentguard.socketutil import addr, code_version, is_unix, socket_path
 
+# Snapshot ONCE at startup: pings must report the code this PROCESS is running,
+# not the current disk state (otherwise stale daemons always look up-to-date).
+_VERSION = code_version()
+
 
 def evaluate(text: str) -> dict:
     """Evaluate one command through the real pipeline (rule + classifier + LLM)."""
-    # Lazy import via import_module: consults sys.modules directly, so resolution
-    # truly happens at call time and sklearn/joblib never block daemon startup.
-    import importlib
-    decision = importlib.import_module("intentguard.decision")
     try:
+        # Lazy import via import_module (call-time resolution; never blocks bind)
+        import importlib
+        decision = importlib.import_module("intentguard.decision")
         result = decision.evaluate_command(text)
-    except Exception as e:  # model missing, API/parse error — never crash the loop
+    except Exception as e:  # missing deps, model missing, API error — reply, don't crash
         return {"action": "error", "layer": "none", "reason": str(e)}
     # Audit trail (best-effort): one JSONL line per flagged command
     from intentguard.audit import log_flag
@@ -90,7 +93,7 @@ def serve():
             payload = json.loads(raw.decode().split("\n", 1)[0])
             if "ping" in payload:
                 # version handshake: CLI restarts stale daemons after code edits
-                reply = json.dumps({"version": code_version()}).encode() + b"\n"
+                reply = json.dumps({"version": _VERSION}).encode() + b"\n"
             elif "shutdown" in payload:
                 reply = b'{"bye": true}\n'
                 stop = True

@@ -11,6 +11,7 @@ Exit codes (contract with shell/intentguard.sh):
 
 import json
 import os
+import shlex
 import socket
 import subprocess
 import sys
@@ -79,8 +80,8 @@ def ensure_daemon(sock: Path) -> bool:
             return True
         try:  # stale or pre-protocol daemon — polite restart, then respawn
             _send({"shutdown": 1})
-        except OSError:
-            pass
+        except (OSError, ValueError):
+            pass  # pre-protocol daemons reply with garbage or nothing
         free_deadline = time.monotonic() + 3.0
         while time.monotonic() < free_deadline and _daemon_alive():
             time.sleep(0.05)
@@ -134,6 +135,11 @@ def ask_via_daemon(intent: str) -> dict:
 
 def render_warning(result: dict, command: str) -> str:
     """Render the confirmation prompt exactly as judges will see it."""
+    # display the human form — undo printf-%q escapes from the bash wrapper
+    try:
+        command = " ".join(shlex.split(command))
+    except ValueError:
+        pass
     risk_color = RISK_LEVEL_COLOR.get(result.get("risk_level", "high"), AMBER)
     explanation = result.get("explanation", {})
     header_color = RED if risk_color == RED else AMBER
@@ -182,6 +188,38 @@ def confirm_flow(result: dict, display_cmd: str) -> int:
     return 1
 
 
+def normalize_input_command(args: list) -> str:
+    """Canonical pipeline form: per-token shell-quoted, space-joined.
+
+    Preserves argv boundaries (a spaced path stays ONE quoted target) so rules
+    still shlex-split to the same tokens AND the LLM reads the true command."""
+    try:
+        tokens = shlex.split(args[0]) if len(args) == 1 else list(args)
+        return " ".join(shlex.quote(t) for t in tokens)
+    except ValueError:
+        return " ".join(args)
+
+
+def parse_ask_intent(args: list):
+    """Return the NL intent if args are an --ask invocation, else None.
+
+    Handles both direct form ('--ask', 'intent words') and the bash-wrapper
+    form where printf %q glues them into one word: '--ask intent\\ words'.
+    """
+    if not args:
+        return None
+    first = args[0]
+    if first == "--ask":
+        return " ".join(args[1:]) or None
+    if first.startswith("--ask"):
+        rest = first[len("--ask"):].strip()
+        try:
+            return " ".join(shlex.split(rest)) or None
+        except ValueError:
+            return rest or None
+    return None
+
+
 def run_ask(intent: str) -> int:
     """NL mode: suggest a command for the intent — only after it passes the pipeline."""
     sock = socket_path()
@@ -219,13 +257,14 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
-    if args[0] == "--ask":
-        if len(args) < 2:
+    intent = parse_ask_intent(args)
+    if args[0].startswith("--ask"):
+        if not intent:
             print('Usage: intentguard --ask "describe your intent"', file=sys.stderr)
             return 1
-        return run_ask(" ".join(args[1:]))
+        return run_ask(intent)
 
-    command = " ".join(args)
+    command = normalize_input_command(args)
     sock = socket_path()
 
     if not ensure_daemon(sock):

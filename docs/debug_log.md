@@ -108,6 +108,62 @@ r'-[rR]\s+-[fF]\s+|-[fF]\s+-[rR]\s+|'
 
 ---
 
+## 2026-08-15 — "failed to start daemon" on native Windows (AF_UNIX)
+
+**Error message:**
+```
+IntentGuard: failed to start daemon
+```
+**Root cause:** `socket.AF_UNIX` doesn't exist on Windows Python 3.11; daemon died at bind while CLI polled a port nothing listened on.
+**Fix:** `intentguard/socketutil.py` — Unix socket on Linux/WSL, TCP loopback `127.0.0.1:45670` on Windows; both sides resolve via one helper.
+**Pattern to remember:** transport choice is a platform decision — isolate it in one module both peers import.
+
+---
+
+## 2026-08-15 — empty reply → JSONDecodeError (import outside try)
+
+**Error message:**
+```
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+```
+**Root cause:** `daemon.evaluate()` did the lazy pipeline import OUTSIDE its try/except; on dep-less Python the ModuleNotFoundError escaped to the serve loop's silent `except: pass`, no reply sent, client parsed b"".
+**Fix:** move the import inside try → every failure becomes an error-dict reply.
+**Pattern to remember:** "never crash the loop" only works if the try actually wraps everything that can throw.
+
+---
+
+## 2026-08-15 — stale daemon self-certifies as up-to-date
+
+**Error message:** fixes kept not appearing live; tests green, behavior unchanged.
+**Root cause:** ping handler computed `code_version()` from disk at request time — daemon-with-old-code compared new disk against new disk → always matched.
+**Fix:** `_VERSION = code_version()` snapshotted at module import; ping returns the snapshot.
+**Time lost:** ~3 debug rounds masked by this.
+**Pattern to remember:** identity checks must reflect the RUNNING process's provenance, not current external state.
+
+---
+
+## 2026-08-15 — json_validate_failed / max completion tokens reached (gpt-oss)
+
+**Error message:**
+```
+400 json_validate_failed ... 'max completion tokens reached before generating a valid document'
+```
+**Root cause:** three stacked issues — gpt-oss reasoning tokens consume completion budget; legacy `max_tokens` param vs documented `max_completion_tokens`; and an unquoted spaced path made the model reason about a command that didn't exist.
+**Fix:** `max_completion_tokens=4096` + `reasoning_effort="low"` + canonical quoted command form (`shlex.quote` per token at CLI edge).
+**How I found it:** Groq docs (reasoning page) + noticing successful explanations misread `/home/k/ig test dir` as three targets.
+**Pattern to remember:** reasoning models need budget for thinking AND unambiguous input; read provider model pages before structured output.
+
+---
+
+## 2026-08-15 — double confirmation prompt (wrapper eval re-entered demo shim)
+
+**Error message:** user answered y, prompt appeared AGAIN, deletion happened once.
+**Root cause:** with both modes sourced, wrapper's post-confirm `eval "$command"` invoked the shimmed `rm()` function, which ran the CLI a second time.
+**Fix:** wrapper sets `IG_VIA_WRAPPER=1` around eval; shims see it and delegate straight to `command <bin>`. Also `--ask` now skips eval entirely (meta command, nothing to execute).
+**Pattern to remember:** layered guards must recognize when a command was already guarded upstream.
+
+---
+
 ## [Date] — [Short bug title]
 
 **Error message:**

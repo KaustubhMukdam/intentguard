@@ -52,6 +52,13 @@ cp .env.example .env   # add GROQ_API_KEY=...
 source shell/intentguard.sh
 intentguard rm -rf /            # flagged, asks for confirmation
 intentguard ls -la              # passes through silently
+
+# 4. natural-language mode (suggestions are vetted through the same pipeline)
+intentguard --ask "show disk usage in human readable form"
+
+# optional: demo mode — shadow rm/dd/… so PLAIN commands are guarded too.
+# Throwaway terminal only, never .bashrc. `unshim` removes it.
+source shell/intentguard-demo.sh
 ```
 
 Without a Groq key, IntentGuard still runs — flagged commands get a local fallback explanation instead of an API call.
@@ -90,7 +97,7 @@ intentguard/
   classifier/              train.py · predict.py · model.joblib
   llm/                     client.py (Groq) · prompts.py
 data/                      self-curated labeled dataset (318 commands)
-tests/                     44 BDD specs, all green
+tests/                     78 specs, all green
 docs/                      full context (PRD, architecture, eval, model card, test-cases)
 ```
 

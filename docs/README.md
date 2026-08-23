@@ -20,6 +20,7 @@ Read `project_context.md` first — paste it at the top of every AI chat/session
 | `eval.md` | Reporting classifier performance, writing the submission's results section |
 
 ## Current status (15 Aug 2026)
-Pre-submission. MVP pipeline complete and tested (44 specs green). Runs end-to-end on
-**Windows PowerShell** (daemon transport fixed — Unix socket on Linux, TCP loopback on
-Windows). Next action: final demo run-through — see `tasks.md`.
+MVP + hardening complete: **78 specs green**, verified end-to-end on both Windows
+PowerShell and WSL bash. Latency fixed (daemon lazy-bind, fast-fail LLM), NL mode
+(`--ask`) live, audit trail live, demo-shim integration available. Remaining:
+sklearn retrain, backup demo video, submission. See `tasks.md` queue table.
