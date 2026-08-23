@@ -9,7 +9,8 @@
 | 2 | Transport round-trip unit test | ✅ done |
 | 3 | Audit trail (`audit.py`, JSONL) | ✅ done |
 | 4 | Recursive-force-delete rule (`rm -rf myproject` now prompts) | ✅ done |
-| 5 | NL mode (`--ask "intent"` → safe suggested command) | 🔵 in progress |
+| 5 | NL mode (`--ask "intent"` → vetted suggestion) | ✅ done |
+| 5b | Stale-daemon auto-restart (ping/shutdown code-version handshake) | ✅ done |
 | 6 | Real-time shell integration (wrapper polish, no `python -m …` typing) | ⬜ next |
 | — | Retrain model locally (kills sklearn 1.9-vs-1.5 warning) | ⬜ queued |
 | — | Final docs batch (learnings/eval numbers after new rule) | ⬜ queued |

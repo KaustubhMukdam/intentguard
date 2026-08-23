@@ -17,7 +17,7 @@ import sys
 import time
 from pathlib import Path
 
-from intentguard.socketutil import addr, is_unix, socket_path
+from intentguard.socketutil import addr, code_version, is_unix, socket_path
 
 # Stitch palette -> ANSI (design_prompt.md + design/intentguard/DESIGN.md)
 RED = "\033[91m"
@@ -64,9 +64,27 @@ def _spawn_daemon():
 
 
 def ensure_daemon(sock: Path) -> bool:
-    """Return True when a responsive daemon is available, spawning one if needed."""
+    """Return True when a responsive, up-to-date daemon is available.
+
+    Version handshake: a daemon serving old code (after edits) is asked to
+    shut down and a fresh one is spawned — no manual stale-daemon cleanup.
+    """
     if _daemon_alive():
-        return True
+        version = None
+        try:
+            version = _send({"ping": 1}).get("version")
+        except (OSError, ValueError):
+            pass  # unreachable, or a pre-protocol daemon sending garbage/nothing
+        if version == code_version():
+            return True
+        try:  # stale or pre-protocol daemon — polite restart, then respawn
+            _send({"shutdown": 1})
+        except OSError:
+            pass
+        free_deadline = time.monotonic() + 3.0
+        while time.monotonic() < free_deadline and _daemon_alive():
+            time.sleep(0.05)
+
     if is_unix() and sock.exists():
         sock.unlink()
     _spawn_daemon()

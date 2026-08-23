@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from intentguard.socketutil import addr, is_unix, socket_path
+from intentguard.socketutil import addr, code_version, is_unix, socket_path
 
 
 def evaluate(text: str) -> dict:
@@ -77,6 +77,7 @@ def serve():
 
     while True:
         conn, _ = server.accept()
+        stop = False
         try:
             raw = b""
             while True:
@@ -87,7 +88,13 @@ def serve():
                 if b"\n" in raw:
                     break
             payload = json.loads(raw.decode().split("\n", 1)[0])
-            if "ask" in payload:
+            if "ping" in payload:
+                # version handshake: CLI restarts stale daemons after code edits
+                reply = json.dumps({"version": code_version()}).encode() + b"\n"
+            elif "shutdown" in payload:
+                reply = b'{"bye": true}\n'
+                stop = True
+            elif "ask" in payload:
                 reply = json.dumps(handle_ask(payload["ask"])).encode() + b"\n"
             else:
                 reply = json.dumps(evaluate(payload["command"])).encode() + b"\n"
@@ -96,6 +103,9 @@ def serve():
             pass
         finally:
             conn.close()
+        if stop:
+            break
+    server.close()
 
 
 if __name__ == "__main__":
