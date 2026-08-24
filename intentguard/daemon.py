@@ -78,37 +78,43 @@ def serve():
     import threading
     threading.Thread(target=_prewarm, daemon=True).start()
 
-    while True:
+    stop_event = threading.Event()
+    while not stop_event.is_set():
         conn, _ = server.accept()
-        stop = False
-        try:
-            raw = b""
-            while True:
-                chunk = conn.recv(8192)
-                if not chunk:
-                    break
-                raw += chunk
-                if b"\n" in raw:
-                    break
-            payload = json.loads(raw.decode().split("\n", 1)[0])
-            if "ping" in payload:
-                # version handshake: CLI restarts stale daemons after code edits
-                reply = json.dumps({"version": _VERSION}).encode() + b"\n"
-            elif "shutdown" in payload:
-                reply = b'{"bye": true}\n'
-                stop = True
-            elif "ask" in payload:
-                reply = json.dumps(handle_ask(payload["ask"])).encode() + b"\n"
-            else:
-                reply = json.dumps(evaluate(payload["command"])).encode() + b"\n"
-            conn.sendall(reply)
-        except Exception:
-            pass
-        finally:
-            conn.close()
-        if stop:
-            break
+        # One thread per connection: a slow LLM call must never block the next
+        # command (head-of-line blocking caused demo-time client timeouts).
+        threading.Thread(target=_handle_conn, args=(conn, stop_event),
+                         daemon=True).start()
     server.close()
+
+
+def _handle_conn(conn, stop_event) -> None:
+    """Serve one line-JSON request on its own thread."""
+    try:
+        raw = b""
+        while True:
+            chunk = conn.recv(8192)
+            if not chunk:
+                return
+            raw += chunk
+            if b"\n" in raw:
+                break
+        payload = json.loads(raw.decode().split("\n", 1)[0])
+        if "ping" in payload:
+            # version handshake: CLI restarts stale daemons after code edits
+            reply = json.dumps({"version": _VERSION}).encode() + b"\n"
+        elif "shutdown" in payload:
+            reply = b'{"bye": true}\n'
+            stop_event.set()
+        elif "ask" in payload:
+            reply = json.dumps(handle_ask(payload["ask"])).encode() + b"\n"
+        else:
+            reply = json.dumps(evaluate(payload["command"])).encode() + b"\n"
+        conn.sendall(reply)
+    except Exception:
+        pass
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

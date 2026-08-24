@@ -71,17 +71,12 @@ def ensure_daemon(sock: Path) -> bool:
     shut down and a fresh one is spawned — no manual stale-daemon cleanup.
     """
     if _daemon_alive():
-        version = None
-        try:
-            version = _send({"ping": 1}).get("version")
-        except (OSError, ValueError):
-            pass  # unreachable, or a pre-protocol daemon sending garbage/nothing
+        reply = _send({"ping": 1})
+        version = reply.get("version") if reply else None
         if version == code_version():
             return True
-        try:  # stale or pre-protocol daemon — polite restart, then respawn
-            _send({"shutdown": 1})
-        except (OSError, ValueError):
-            pass  # pre-protocol daemons reply with garbage or nothing
+        # stale or pre-protocol daemon — polite restart, then respawn
+        _send({"shutdown": 1})  # pre-protocol daemons may ignore this
         free_deadline = time.monotonic() + 3.0
         while time.monotonic() < free_deadline and _daemon_alive():
             time.sleep(0.05)
@@ -108,19 +103,23 @@ def _roundtrip(s: socket.socket, data: bytes) -> dict:
     return json.loads(raw.split(b"\n", 1)[0])
 
 
-def _send(payload: dict) -> dict:
-    """Send one JSON payload to the daemon; returns the JSON reply."""
+def _send(payload: dict):
+    """Send one JSON payload to the daemon; returns reply dict or None on any
+    transport failure (timeout/refused/garbage) so callers degrade gracefully."""
     data = (json.dumps(payload) + "\n").encode()
-    if is_unix():
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+    try:
+        if is_unix():
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                s.settimeout(_DAEMON_WAIT_SECONDS)
+                s.connect(str(socket_path()))
+                return _roundtrip(s, data)
+        host, port = addr()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(_DAEMON_WAIT_SECONDS)
-            s.connect(str(socket_path()))
+            s.connect((host, port))
             return _roundtrip(s, data)
-    host, port = addr()
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(_DAEMON_WAIT_SECONDS)
-        s.connect((host, port))
-        return _roundtrip(s, data)
+    except (TimeoutError, OSError, ValueError):
+        return None
 
 
 def eval_via_daemon(command: str) -> dict:
@@ -228,6 +227,10 @@ def run_ask(intent: str) -> int:
         return 1
 
     result = ask_via_daemon(intent)
+    if result is None:
+        print("IntentGuard: daemon busy or unreachable — please retry.",
+              file=sys.stderr)
+        return 1
     if result.get("action") == "error":
         print("IntentGuard: no safe suggestion for this intent.",
               file=sys.stderr)
@@ -272,6 +275,10 @@ def main() -> int:
         return 1
 
     result = eval_via_daemon(command)
+    if result is None:
+        print("IntentGuard: daemon busy or unreachable — please retry.",
+              file=sys.stderr)
+        return 1
 
     if result.get("action") == "execute":
         return 0

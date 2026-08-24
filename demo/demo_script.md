@@ -1,4 +1,92 @@
-# IntentGuard — Live Demo Script
+# IntentGuard — Demo Scripts
+
+## PART A — VIDEO RECORDING SCRIPT (~2.5 min, for YouTube submission)
+
+**Setup before recording:** open a WSL terminal, font size 18+, repo root.
+Run `intentguard echo warmup` once (daemon boot happens off-camera), then start
+recording. Speak slowly and politely.
+
+---
+
+### Scene 1 — Hook (0:00–0:25)
+
+TYPE:
+```bash
+intentguard rm -rf /
+```
+SAY:
+> "Hi, I'm Kaustubh, and this is IntentGuard. I just typed a command that would
+> delete every file on this Linux system. Before bash could run it, IntentGuard
+> stopped it — and explained exactly what would have happened."
+
+Press **N**. SAY: "I'll decline, of course."
+
+### Scene 2 — Zero friction on safe commands (0:25–0:45)
+
+TYPE:
+```bash
+intentguard ls -la
+intentguard git status
+```
+SAY:
+> "Everyday commands pass through instantly — no prompts, no waiting. IntentGuard
+> speaks up only when something is genuinely dangerous."
+
+### Scene 3 — Not just a blocklist: the ML layer (0:45–1:20)
+
+TYPE:
+```bash
+intentguard shred /dev/sda1
+```
+SAY:
+> "'shred' is not in any hardcoded blocklist. Our machine-learning model — trained
+> locally on CPU, on a self-curated dataset of 318 commands — recognized it as
+> destructive and flagged it. This is layer two catching what rules can't."
+Press **N**.
+
+### Scene 4 — The explanation layer (1:20–1:50)
+
+TYPE:
+```bash
+mkdir -p /tmp/demo-logs && intentguard rm -rf /tmp/demo-logs
+```
+SAY (while reading the prompt):
+> "When a command IS flagged, you get a plain-English explanation: what it does,
+> its blast radius, and a safer alternative. That's layer three, powered by an
+> LLM through the Groq API."
+Press **N**.
+
+### Scene 5 — AI suggestions, vetted by our own pipeline (1:50–2:20)
+
+TYPE:
+```bash
+intentguard --ask "show disk usage"
+```
+SAY: "You can also describe what you want in plain English."
+
+Then TYPE:
+```bash
+intentguard --ask "delete everything in /etc"
+```
+SAY:
+> "But watch this — I asked for something dangerous. The assistant suggests a
+> command… and IntentGuard's own safety pipeline flags that suggestion before
+> anything happens. Even AI output gets checked here."
+
+Press **N** if prompted.
+
+### Scene 6 — Close (2:20–2:40)
+
+SAY:
+> "IntentGuard: rule engine for instant catches, machine learning for novel ones,
+> and an LLM that explains in plain language. Built solo, free-tier only.
+> Thank you for watching."
+
+Upload as **Unlisted** on YouTube; paste link in the submission form.
+
+---
+
+## PART B — LIVE PITCH SCRIPT (original)
 
 Goal: judges understand what this is within the first 60 seconds. The "oh, it caught that" moment goes FIRST. This entire script runs locally, offline — only flagged commands call Groq.
 
@@ -15,7 +103,7 @@ source shell/intentguard.sh     # defines the intentguard() wrapper
 Note: the first `intentguard` call of a session spawns a background daemon (loads the model once, ~3s). Subsequent commands are ~200ms. Warm it up before judges arrive:
 
 ```bash
-intentguard echo warmup          # pays the one-time ~3s daemon boot
+intentguard echo warmup          # pays the one-time daemon boot
 ```
 
 Verify: `intentguard echo demo-ok` → prints `demo-ok` with no prompt, near-instant.
@@ -54,7 +142,7 @@ intentguard ":(){ :|:& };:"                # fork bomb, rule engine
 
 Say: *"These aren't in a giant blocklist — this is a rule engine that tokenizes the command and understands structure. Now watch the part rules can't do."*
 
-Turn it toward the classifier (a command that is risky but NOT a hardcoded pattern):
+Turn it toward the classifier:
 
 ```bash
 intentguard shred /dev/sda1                # classifier path (not a rule)
