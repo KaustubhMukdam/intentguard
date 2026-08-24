@@ -1,5 +1,13 @@
 # Experiment Log — IntentGuard
 
+## 2026-08-15 — Run 03: retrain for sklearn version alignment
+
+- **Hypothesis:** re-pickling the final model under the runtime venv's scikit-learn (1.5.0) removes the `InconsistentVersionWarning` unpickle risk without changing behavior.
+- **Change made:** same config as Run 02 winner (`--ngram 1 3`, `class_weight='balanced'`); no hyperparameter changes. Trigger: model.joblib was pickled on sklearn 1.9.0 but served by a 1.5.0 venv.
+- **Dataset:** unchanged — 318 commands (165 safe / 153 risky), 80/20 stratified (random_state=42).
+- **Environment:** Windows CPU (.venv), scikit-learn 1.5.0.
+- **Result:** byte-for-byte identical metrics to Run 02 — accuracy **0.9844**, risky F1 **0.9836**, risky recall **0.9677**, risky precision **1.0000** (n=64). Confirms split determinism; zero behavioral drift. Suite green with zero version warnings post-retrain; daemon auto-restart picked up the new artifact via the code-version hash (model mtime+size included).
+
 ## 2026-08-14 — Run 01: Baseline TF-IDF + LinearSVC
 
 - **Hypothesis:** Character n-grams over shlex-tokenized commands + LinearSVC gives meaningful F1/recall on the risky class vs. majority baseline.

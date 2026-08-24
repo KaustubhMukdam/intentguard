@@ -21,6 +21,6 @@ Read `project_context.md` first — paste it at the top of every AI chat/session
 
 ## Current status (15 Aug 2026)
 MVP + hardening complete: **78 specs green**, verified end-to-end on both Windows
-PowerShell and WSL bash. Latency fixed (daemon lazy-bind, fast-fail LLM), NL mode
-(`--ask`) live, audit trail live, demo-shim integration available. Remaining:
-sklearn retrain, backup demo video, submission. See `tasks.md` queue table.
+PowerShell and WSL bash. Latency fixed, NL mode (`--ask`) live, audit trail live,
+demo-shim integration available, model retrained under serving sklearn (no version
+warnings). Remaining: backup demo video, final submission. See `tasks.md` queue.
