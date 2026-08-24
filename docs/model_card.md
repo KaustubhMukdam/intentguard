@@ -3,9 +3,9 @@
 ## Model overview
 - **Type:** Linear Support Vector Classifier (LinearSVC) over TF-IDF features
 - **Task:** Binary classification — Linux command text → `safe` / `risky`
-- **Training date:** 2026-08-14
-- **Framework:** scikit-learn 1.9.0
-- **Training environment:** Local CPU (laptop/WSL) — no cloud needed; inference always runs locally on CPU
+- **Training date:** 2026-08-14 (Run 02); re-pickled 2026-08-15 (Run 03) under the serving venv's scikit-learn to eliminate the unpickle version mismatch
+- **Framework:** scikit-learn 1.5.0 (runtime venv; metrics identical to the original 1.9.0 run)
+- **Training environment:** Local CPU — no cloud needed; inference always runs locally on CPU
 
 ## Training data
 - **Source:** Self-curated dataset — see `data_doc.md` for full sourcing/curation notes

@@ -34,11 +34,16 @@ def addr() -> tuple:
 
 
 def code_version() -> str:
-    """Hash of the package source — lets CLI detect stale daemons after edits."""
+    """Hash of package source + model artifact — lets the CLI detect stale
+    daemons after code edits AND retrains (mtime+size, not full read)."""
     h = hashlib.md5()
     root = Path(__file__).resolve().parent
     for p in sorted(root.rglob("*.py")):
         if "__pycache__" in p.parts:
             continue
         h.update(p.read_bytes())
+    model = root / "classifier" / "model.joblib"
+    if model.exists():
+        st = model.stat()
+        h.update(f"{st.st_mtime_ns}:{st.st_size}".encode())
     return h.hexdigest()[:8]
